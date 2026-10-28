@@ -187,7 +187,13 @@ const ProfileTile: FC<ProfileTileProps> = ({
                     {member.Name}
                 </Typography>
                 {showContinue && (
-                    <Chip size='small' color='primary' label={globalize.translate('ContinueAs', member.Name ?? '')} sx={{ maxWidth: '100%' }} />
+                    <Chip
+                        size='small'
+                        color='primary'
+                        label={globalize.translate('ContinueAs', member.Name ?? '')}
+                        // Let the label wrap on narrow tiles instead of cutting the name off.
+                        sx={{ maxWidth: '100%', height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', textAlign: 'center', py: 0.25 } }}
+                    />
                 )}
                 {isCurrent && !showContinue && (
                     <Chip size='small' color='primary' variant='outlined' label={globalize.translate('YouBadge')} />
