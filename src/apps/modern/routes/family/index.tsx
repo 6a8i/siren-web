@@ -113,13 +113,18 @@ const FamilyPage = () => {
 
     // Switching
 
-    /** A wrong PIN and a locked profile both answer 401; the member list says which it is. */
-    const reportWrongPin = useCallback(async (member: FamilyMemberDto) => {
+    /**
+     * The fifth wrong PIN answers 401 and locks the profile, a locked or disabled profile answers 403
+     * before the PIN is checked; the refreshed member list says which it is.
+     */
+    const reportWrongPin = useCallback(async (member: FamilyMemberDto, refused: boolean) => {
         const { data } = await refetchMembers();
         const fresh = data?.find(candidate => candidate.Id === member.Id);
         if (fresh?.IsLockedOut) {
             setIsSwitchLocked(true);
             setSwitchError(undefined);
+        } else if (refused) {
+            setSwitchError(globalize.translate('ProfileDisabledMessage'));
         } else {
             setSwitchError(globalize.translate('PinIncorrect'));
         }
@@ -134,10 +139,10 @@ const FamilyPage = () => {
         switchFamilyProfile(family.Id, member.Id, pin).catch((err: unknown) => {
             loading.hide();
             setIsSwitching(false);
-            if (err instanceof ProfileSwitchError && err.isWrongPin) {
+            if (err instanceof ProfileSwitchError && (err.isWrongPin || err.isRefused)) {
                 setSwitchTarget(current => current ?? member);
-                reportWrongPin(member).catch(() => {
-                    setSwitchError(globalize.translate('PinIncorrect'));
+                reportWrongPin(member, err.isRefused).catch(() => {
+                    setSwitchError(globalize.translate(err.isRefused ? 'ProfileDisabledMessage' : 'PinIncorrect'));
                 });
             } else {
                 console.error('[FamilyPage] profile switch failed', err);

@@ -232,6 +232,7 @@
     "PinProtected": "PIN protected",
     "ProfileLocked": "Locked",
     "ProfileLockedOut": "This profile was locked after too many wrong PIN attempts. A family administrator can unlock it.",
+    "ProfileDisabledMessage": "This profile is disabled. A family administrator can enable it again.",
     "ProfileUnlocked": "Profile unlocked.",
     "RemoveProfile": "Remove profile",
     "RemoveProfileConfirmation": "Remove the profile {0}? Its watch history and settings will be deleted.",

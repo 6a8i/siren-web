@@ -2032,6 +2032,7 @@
     "PinProtected": "Protegido por PIN",
     "ProfileLocked": "Bloqueado",
     "ProfileLockedOut": "Este perfil foi bloqueado após muitas tentativas de PIN incorretas. Um administrador da família pode desbloqueá-lo.",
+    "ProfileDisabledMessage": "Este perfil está desativado. Um administrador da família pode reativá-lo.",
     "ProfileUnlocked": "Perfil desbloqueado.",
     "RemoveProfile": "Remover perfil",
     "RemoveProfileConfirmation": "Remover o perfil {0}? O histórico e as configurações dele serão excluídos.",

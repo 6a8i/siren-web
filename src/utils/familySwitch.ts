@@ -12,6 +12,7 @@ type AuthenticatingApiClient = ApiClient & {
 };
 
 const HTTP_UNAUTHORIZED = 401;
+const HTTP_FORBIDDEN = 403;
 
 export class ProfileSwitchError extends Error {
     readonly status?: number;
@@ -28,6 +29,11 @@ export class ProfileSwitchError extends Error {
     /** A wrong PIN, as opposed to a connection or server problem. */
     get isWrongPin() {
         return this.status === HTTP_UNAUTHORIZED;
+    }
+
+    /** The server refused before checking the PIN: the profile is disabled or locked out. */
+    get isRefused() {
+        return this.status === HTTP_FORBIDDEN;
     }
 }
 
