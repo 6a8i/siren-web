@@ -69,9 +69,10 @@ You may be asked to update your Pull Request to target a release branch as part 
 
 #### Supported Browsers
 
-This codebase supports a wide variety of platforms including TVs that are stuck on ancient versions of browser engines.
+This codebase supports a wide variety of platforms including TVs that are stuck on old versions of browser engines.
+The compilation floor is ES2017: TypeScript emits ES2017 (`tsconfig.json`), Babel downlevels the rest to the browsers in the `browserslist` section of the [package.json file](./package.json), and `npm run escheck` rejects any build output above ES2017.
 As a result, we can only use JavaScript and CSS features that are either directly supported by these browser versions or can be otherwise compiled or polyfilled for compatibility.
-The official list of supported browser versions can be found in the `browserlist` section of the [package.json file](./package.json).
+The supported browsers and TV platforms, and the ones dropped when the floor was raised from ES5, are listed in [docs/browser-support.md](./docs/browser-support.md).
 
 ## Application Components
 

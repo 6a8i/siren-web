@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "baseUrl": "src",
-    "target": "ES5",
-    "lib": ["DOM", "DOM.Iterable", "ES2015"],
+    "target": "ES2017",
+    "lib": ["DOM", "DOM.Iterable", "ES2017"],
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -15,8 +15,7 @@
     "outDir": "./dist/",
     "checkJs": false,
     "strictNullChecks": true,
-    "jsx": "react-jsx",
-    "downlevelIteration": true
+    "jsx": "react-jsx"
   },
   "include": [
     "src"

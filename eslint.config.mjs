@@ -257,6 +257,9 @@ export default tseslint.config(
                 'Response.json',
                 // document-register-element
                 'document.registerElement',
+                // MDN lists document.body as a partial implementation before Firefox 60 (HTMLDocument only),
+                // which is the only kind of document this app ever runs in
+                'document.body',
                 // fast-text-encoding
                 'TextEncoder',
                 // intersection-observer

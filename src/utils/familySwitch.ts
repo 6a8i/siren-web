@@ -19,9 +19,6 @@ export class ProfileSwitchError extends Error {
 
     constructor(status?: number) {
         super(status ? `Profile switch failed (${status})` : 'Profile switch failed');
-        // The build targets ES5, where a subclass of Error loses its prototype unless it is restored here;
-        // without this, instanceof checks on the thrown error fail.
-        Object.setPrototypeOf(this, new.target.prototype);
         this.name = 'ProfileSwitchError';
         this.status = status;
     }

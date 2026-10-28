@@ -1,4 +1,5 @@
 const fg = require('fast-glob');
+const fs = require('fs');
 const path = require('path');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
@@ -32,6 +33,11 @@ try {
 }
 
 const NODE_MODULES_REGEX = /[\\/]node_modules[\\/]/;
+
+// webpack resolves every module to its real path, so when node_modules is a link (a git worktree sharing
+// one install, pnpm) the babel include list below has to point at the real directory or it matches nothing.
+const NODE_MODULES_DIR = fs.realpathSync(path.resolve(__dirname, 'node_modules'));
+const nodeModule = name => path.join(NODE_MODULES_DIR, name);
 
 const THEMES = fg.globSync('themes/**/*.scss', { cwd: path.resolve(__dirname, 'src') });
 const THEMES_BY_ID = THEMES.reduce((acc, theme) => {
@@ -192,54 +198,54 @@ const config = {
             {
                 test: /\.(js|jsx|mjs)$/,
                 include: [
-                    path.resolve(__dirname, 'node_modules/@jellyfin/libass-wasm'),
-                    path.resolve(__dirname, 'node_modules/@jellyfin/sdk'),
-                    path.resolve(__dirname, 'node_modules/@mui/base'),
-                    path.resolve(__dirname, 'node_modules/@mui/lab'),
-                    path.resolve(__dirname, 'node_modules/@mui/material'),
-                    path.resolve(__dirname, 'node_modules/@mui/private-theming'),
-                    path.resolve(__dirname, 'node_modules/@mui/styled-engine'),
-                    path.resolve(__dirname, 'node_modules/@mui/system'),
-                    path.resolve(__dirname, 'node_modules/@mui/utils'),
-                    path.resolve(__dirname, 'node_modules/@mui/x-date-pickers'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/latest'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/passive-layout-effect'),
-                    path.resolve(__dirname, 'node_modules/@react-hook/resize-observer'),
-                    path.resolve(__dirname, 'node_modules/@remix-run/router'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/match-sorter-utils'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/query-core'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/query-persist-client-core'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/react-query'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/react-table'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/react-virtual'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/table-core'),
-                    path.resolve(__dirname, 'node_modules/@tanstack/virtual-core'),
-                    path.resolve(__dirname, 'node_modules/@uupaa/dynamic-import-polyfill'),
-                    path.resolve(__dirname, 'node_modules/axios'),
-                    path.resolve(__dirname, 'node_modules/blurhash'),
-                    path.resolve(__dirname, 'node_modules/compare-versions'),
-                    path.resolve(__dirname, 'node_modules/date-fns'),
-                    path.resolve(__dirname, 'node_modules/dom7'),
-                    path.resolve(__dirname, 'node_modules/epubjs'),
-                    path.resolve(__dirname, 'node_modules/flv.js'),
-                    path.resolve(__dirname, 'node_modules/highlight-words'),
-                    path.resolve(__dirname, 'node_modules/idb-keyval'),
-                    path.resolve(__dirname, 'node_modules/libarchive.js'),
-                    path.resolve(__dirname, 'node_modules/libbitsub'),
-                    path.resolve(__dirname, 'node_modules/linkify-it'),
-                    path.resolve(__dirname, 'node_modules/markdown-it'),
-                    path.resolve(__dirname, 'node_modules/material-react-table'),
-                    path.resolve(__dirname, 'node_modules/mdurl'),
-                    path.resolve(__dirname, 'node_modules/proxy-polyfill'),
-                    path.resolve(__dirname, 'node_modules/punycode'),
-                    path.resolve(__dirname, 'node_modules/react-blurhash'),
-                    path.resolve(__dirname, 'node_modules/react-lazy-load-image-component'),
-                    path.resolve(__dirname, 'node_modules/react-router'),
-                    path.resolve(__dirname, 'node_modules/remove-accents'),
-                    path.resolve(__dirname, 'node_modules/screenfull'),
-                    path.resolve(__dirname, 'node_modules/ssr-window'),
-                    path.resolve(__dirname, 'node_modules/swiper'),
-                    path.resolve(__dirname, 'node_modules/usehooks-ts'),
+                    nodeModule('@jellyfin/libass-wasm'),
+                    nodeModule('@jellyfin/sdk'),
+                    nodeModule('@mui/base'),
+                    nodeModule('@mui/lab'),
+                    nodeModule('@mui/material'),
+                    nodeModule('@mui/private-theming'),
+                    nodeModule('@mui/styled-engine'),
+                    nodeModule('@mui/system'),
+                    nodeModule('@mui/utils'),
+                    nodeModule('@mui/x-date-pickers'),
+                    nodeModule('@react-hook/latest'),
+                    nodeModule('@react-hook/passive-layout-effect'),
+                    nodeModule('@react-hook/resize-observer'),
+                    nodeModule('@remix-run/router'),
+                    nodeModule('@tanstack/match-sorter-utils'),
+                    nodeModule('@tanstack/query-core'),
+                    nodeModule('@tanstack/query-persist-client-core'),
+                    nodeModule('@tanstack/react-query'),
+                    nodeModule('@tanstack/react-table'),
+                    nodeModule('@tanstack/react-virtual'),
+                    nodeModule('@tanstack/table-core'),
+                    nodeModule('@tanstack/virtual-core'),
+                    nodeModule('@uupaa/dynamic-import-polyfill'),
+                    nodeModule('axios'),
+                    nodeModule('blurhash'),
+                    nodeModule('compare-versions'),
+                    nodeModule('date-fns'),
+                    nodeModule('dom7'),
+                    nodeModule('epubjs'),
+                    nodeModule('flv.js'),
+                    nodeModule('highlight-words'),
+                    nodeModule('idb-keyval'),
+                    nodeModule('libarchive.js'),
+                    nodeModule('libbitsub'),
+                    nodeModule('linkify-it'),
+                    nodeModule('markdown-it'),
+                    nodeModule('material-react-table'),
+                    nodeModule('mdurl'),
+                    nodeModule('proxy-polyfill'),
+                    nodeModule('punycode'),
+                    nodeModule('react-blurhash'),
+                    nodeModule('react-lazy-load-image-component'),
+                    nodeModule('react-router'),
+                    nodeModule('remove-accents'),
+                    nodeModule('screenfull'),
+                    nodeModule('ssr-window'),
+                    nodeModule('swiper'),
+                    nodeModule('usehooks-ts'),
                     path.resolve(__dirname, 'src')
                 ],
                 use: [{
@@ -254,7 +260,7 @@ const config = {
             {
                 test: /\.(js|jsx|mjs)$/,
                 include: [
-                    path.resolve(__dirname, 'node_modules/@tanstack/query-devtools')
+                    nodeModule('@tanstack/query-devtools')
                 ],
                 resolve: {
                     fullySpecified: false
@@ -294,8 +300,8 @@ const config = {
             {
                 test: /\.js$/,
                 include: [
-                    path.resolve(__dirname, 'node_modules/pdfjs-dist'),
-                    path.resolve(__dirname, 'node_modules/xmldom')
+                    nodeModule('pdfjs-dist'),
+                    nodeModule('xmldom')
                 ],
                 use: [{
                     loader: 'babel-loader',

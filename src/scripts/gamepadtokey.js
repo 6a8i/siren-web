@@ -257,7 +257,7 @@ function raiseKeyEvent(oldPressedState, newPressedState, key, keyCode, enableRep
 let inputLoopTimer;
 function runInputLoop() {
     // Get the latest gamepad state.
-    const gamepads = navigator.getGamepads(); /* eslint-disable-line compat/compat */
+    const gamepads = navigator.getGamepads();
 
     let lastGamepad = _lastGamepad;
     _lastGamepad = -1;
@@ -383,7 +383,7 @@ function stopInputLoop() {
 }
 
 function isGamepadConnected() {
-    const gamepads = navigator.getGamepads(); /* eslint-disable-line compat/compat */
+    const gamepads = navigator.getGamepads();
     for (let i = 0, len = gamepads.length; i < len; i++) {
         const gamepad = gamepads[i];
         if (gamepad?.connected) {
