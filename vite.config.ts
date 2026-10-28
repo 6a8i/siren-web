@@ -10,6 +10,8 @@ export default defineConfig({
             include: [ 'src' ]
         },
         environment: 'jsdom',
+        // Unit tests live next to the code; the Playwright suite in tests/e2e has its own runner.
+        include: [ 'src/**/*.{test,spec}.{js,jsx,ts,tsx}' ],
         restoreMocks: true
     }
 });

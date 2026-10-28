@@ -1,0 +1,89 @@
+name: End-to-end 🎭
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright against a throwaway Siren 🎭
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      SERVER_DLL: ${{ github.workspace }}/siren/Jellyfin.Server/bin/Release/net10.0/jellyfin.dll
+      FFMPEG: /usr/bin/ffmpeg
+
+    steps:
+      - name: Check out the web client ⬇️
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: web
+          show-progress: false
+
+      - name: Check out the server ⬇️
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: 6a8i/siren
+          path: siren
+          show-progress: false
+
+      - name: Setup .NET ⚙️
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+          cache: true
+          cache-dependency-path: siren/Directory.Packages.props
+
+      - name: Install ffmpeg 🎬
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Build the server 🏗️
+        working-directory: siren
+        run: dotnet build Jellyfin.Server/Jellyfin.Server.csproj -c Release
+
+      - name: Setup node environment ⚙️
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+          check-latest: true
+
+      - name: Install dependencies 📦
+        working-directory: web
+        run: npm ci --no-audit
+
+      - name: Build the web client 🏗️
+        working-directory: web
+        run: npm run build:production
+
+      - name: Install Chromium 🌐
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the e2e suite 🎭
+        working-directory: web
+        run: npm run test:e2e
+
+      - name: Upload traces and screenshots 📤
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-test-results
+          path: web/test-results
+          if-no-files-found: ignore

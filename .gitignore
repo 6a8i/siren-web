@@ -6,6 +6,11 @@ node_modules
 # test coverage
 coverage
 
+# playwright (npm run test:e2e)
+test-results
+playwright-report
+tests/e2e/.auth
+
 # config
 config.json
 
