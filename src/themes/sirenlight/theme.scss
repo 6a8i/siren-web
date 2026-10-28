@@ -2,9 +2,11 @@
 
 $background-default: #f4f7fb;
 $background-paper: #fff;
-$primary-main: #0d9488;
-$primary-dark: #0f766e;
-$primary-light: #14b8a6;
+
+/* One step deeper than the dark theme's teal so white text on a button reaches WCAG AA (5.5:1) */
+$primary-main: #0f766e;
+$primary-dark: #115e59;
+$primary-light: #0d9488;
 $primary-contrastText: #fff;
 $secondary-main: #0284c7;
 $secondary-contrastText: #fff;
@@ -24,7 +26,7 @@ $background-image:
     $primary-main: $primary-main,
     $primary-dark: $primary-dark,
     $primary-light: $primary-light,
-    $primary-hover: rgba(13, 148, 136, 0.12),
+    $primary-hover: rgba(15, 118, 110, 0.12),
     $primary-contrastText: $primary-contrastText,
     $secondary-main: $secondary-main,
     $secondary-contrastText: $secondary-contrastText,
@@ -34,7 +36,7 @@ $background-image:
     $error-contrastText: #ffffff,
     $text-primary: $text-primary,
     $text-secondary: $text-secondary,
-    $action-focus: rgba(13, 148, 136, 0.14),
+    $action-focus: rgba(15, 118, 110, 0.14),
     $action-hover: rgba(15, 23, 42, 0.05),
     $divider: rgba(15, 23, 42, 0.1),
     $appBar-defaultBg: rgba(244, 247, 251, 0.8),

@@ -11,10 +11,12 @@ import Typography from '@mui/material/Typography';
 import React, { Fragment } from 'react';
 
 import { appHost } from 'components/apphost';
+import AccentSwatch from 'components/theme/AccentSwatch';
 import { AppFeature } from 'constants/appFeature';
 import { LayoutMode } from 'constants/layoutMode';
 import { useApi } from 'hooks/useApi';
 import { useThemes } from 'hooks/useThemes';
+import { ACCENT_PRESETS } from 'themes/accent';
 import { AUTO_THEME_ID } from 'utils/theme';
 import globalize from 'lib/globalize';
 
@@ -77,6 +79,29 @@ export function DisplayPreferences({ onChange, values }: Readonly<DisplayPrefere
                     </Select>
                 </FormControl>
             ) }
+
+            <FormControl fullWidth>
+                <InputLabel id='display-settings-accent-label'>{globalize.translate('LabelAccentColor')}</InputLabel>
+                <Select
+                    aria-describedby='display-settings-accent-description'
+                    inputProps={{
+                        name: 'accentColor'
+                    }}
+                    labelId='display-settings-accent-label'
+                    onChange={onChange}
+                    value={values.accentColor}
+                >
+                    { ...ACCENT_PRESETS.map(preset => (
+                        <MenuItem key={preset.id} value={preset.id}>
+                            <AccentSwatch preset={preset} />
+                            {globalize.translate(preset.label)}
+                        </MenuItem>
+                    ))}
+                </Select>
+                <FormHelperText id='display-settings-accent-description'>
+                    {globalize.translate('LabelAccentColorHelp')}
+                </FormHelperText>
+            </FormControl>
 
             <FormControl fullWidth>
                 <FormControlLabel

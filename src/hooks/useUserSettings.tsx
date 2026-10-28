@@ -11,6 +11,8 @@ interface UserSettings {
     disableCustomCss: boolean
     theme?: string
     dashboardTheme?: string
+    /** The accent colour preset id (see themes/accent) */
+    accentColor?: string
     dateTimeLocale?: string
     language?: string
     /** The number of items to display per page in the library */
@@ -25,6 +27,7 @@ const UserSettingField = {
     // Theme settings
     Theme: 'appTheme',
     DashboardTheme: 'dashboardTheme',
+    AccentColor: 'accentColor',
     // Locale settings
     DateTimeLocale: 'datetimelocale',
     Language: 'language',
@@ -46,6 +49,7 @@ export const UserSettingsProvider: FC<PropsWithChildren<unknown>> = ({ children 
     const [ disableCustomCss, setDisableCustomCss ] = useState(false);
     const [ theme, setTheme ] = useState<string>();
     const [ dashboardTheme, setDashboardTheme ] = useState<string>();
+    const [ accentColor, setAccentColor ] = useState<string>();
     const [ dateTimeLocale, setDateTimeLocale ] = useState<string>();
     const [ language, setLanguage ] = useState<string | undefined>(FALLBACK_CULTURE);
     const [ libraryPageSize, setLibraryPageSize ] = useState<number>(DEFAULT_LIBRARY_PAGE_SIZE);
@@ -57,6 +61,7 @@ export const UserSettingsProvider: FC<PropsWithChildren<unknown>> = ({ children 
         disableCustomCss,
         theme,
         dashboardTheme,
+        accentColor,
         dateTimeLocale,
         locale: language,
         libraryPageSize
@@ -65,6 +70,7 @@ export const UserSettingsProvider: FC<PropsWithChildren<unknown>> = ({ children 
         disableCustomCss,
         theme,
         dashboardTheme,
+        accentColor,
         dateTimeLocale,
         language,
         libraryPageSize
@@ -76,6 +82,7 @@ export const UserSettingsProvider: FC<PropsWithChildren<unknown>> = ({ children 
         setDisableCustomCss(userSettings.disableCustomCss());
         setTheme(userSettings.theme());
         setDashboardTheme(userSettings.dashboardTheme());
+        setAccentColor(userSettings.accentColor());
         setDateTimeLocale(userSettings.dateTimeLocale());
         setLanguage(userSettings.language());
         setLibraryPageSize(userSettings.libraryPageSize() ?? DEFAULT_LIBRARY_PAGE_SIZE);

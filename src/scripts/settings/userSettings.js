@@ -95,7 +95,6 @@ export class UserSettings {
             });
     }
 
-    // FIXME: 'appSettings.set' doesn't return any value
     /**
      * Set value of setting.
      * @param {string} name - Name of setting.
@@ -105,7 +104,7 @@ export class UserSettings {
     set(name, value, enableOnServer) {
         const userId = this.currentUserId;
         const currentValue = this.get(name, enableOnServer);
-        const result = appSettings.set(name, value, userId);
+        appSettings.set(name, value, userId);
 
         if (enableOnServer !== false && this.displayPrefs) {
             this.displayPrefs.CustomPrefs[name] = value == null ? value : value.toString();
@@ -115,8 +114,6 @@ export class UserSettings {
         if (currentValue !== value) {
             Events.trigger(this, 'change', [name]);
         }
-
-        return result;
     }
 
     /**
@@ -458,6 +455,19 @@ export class UserSettings {
     }
 
     /**
+     * Get or set the accent colour preset (see themes/accent). Stored like the theme: on this device only.
+     * @param {string|undefined} [val] - Accent colour preset id.
+     * @return {string} Accent colour preset id.
+     */
+    accentColor(val) {
+        if (val !== undefined) {
+            return this.set('accentColor', val, false);
+        }
+
+        return this.get('accentColor', false);
+    }
+
+    /**
      * Get or set screensaver.
      * @param {string|undefined} [val] - Screensaver.
      * @return {string} Screensaver.
@@ -746,6 +756,7 @@ export const skipForwardLength = currentSettings.skipForwardLength.bind(currentS
 export const dashboardTheme = currentSettings.dashboardTheme.bind(currentSettings);
 export const skin = currentSettings.skin.bind(currentSettings);
 export const theme = currentSettings.theme.bind(currentSettings);
+export const accentColor = currentSettings.accentColor.bind(currentSettings);
 export const screensaver = currentSettings.screensaver.bind(currentSettings);
 export const backdropScreensaverInterval = currentSettings.backdropScreensaverInterval.bind(currentSettings);
 export const slideshowInterval = currentSettings.slideshowInterval.bind(currentSettings);

@@ -16,7 +16,7 @@ import Backdrop from 'components/Backdrop';
 import layoutManager from 'components/layoutManager';
 import BangRedirect from 'components/router/BangRedirect';
 import { createRouterHistory } from 'components/router/routerHistory';
-import appTheme from 'themes';
+import { useAppTheme } from 'hooks/useAppTheme';
 import { ThemeStorageManager } from 'themes/themeStorageManager';
 
 const router = createHashRouter([
@@ -48,10 +48,11 @@ function RootAppLayout() {
     const location = useLocation();
     const isNewLayoutPath = Object.values(DASHBOARD_APP_PATHS)
         .some(path => location.pathname.startsWith(`/${path}`));
+    const theme = useAppTheme();
 
     return (
         <ThemeProvider
-            theme={appTheme}
+            theme={theme}
             defaultMode='dark'
             storageManager={ThemeStorageManager}
         >

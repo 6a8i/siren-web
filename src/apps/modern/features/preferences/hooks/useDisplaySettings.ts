@@ -8,6 +8,7 @@ import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
 import themeManager from 'scripts/themeManager';
 import { currentSettings, UserSettings } from 'scripts/settings/userSettings';
+import { DEFAULT_ACCENT_ID } from 'themes/accent';
 
 import type { DisplaySettingsValues } from '../types/displaySettingsValues';
 import { useThemes } from 'hooks/useThemes';
@@ -84,6 +85,7 @@ async function loadDisplaySettings({
     await settings.setUserInfo(userId, api);
 
     const displaySettings = {
+        accentColor: settings.accentColor() || DEFAULT_ACCENT_ID,
         customCss: settings.customCss() || '',
         dashboardTheme: settings.dashboardTheme() || defaultTheme?.id || FALLBACK_THEME_ID,
         dateTimeLocale: settings.dateTimeLocale() || 'auto',
@@ -151,6 +153,7 @@ async function saveDisplaySettings({
     userSettings.backdropScreensaverInterval(newDisplaySettings.backdropScreensaverInterval);
     userSettings.slideshowInterval(newDisplaySettings.slideshowInterval);
     userSettings.theme(newDisplaySettings.theme);
+    userSettings.accentColor(newDisplaySettings.accentColor);
 
     layoutManager.setLayout(normalizeValue(newDisplaySettings.layout));
 

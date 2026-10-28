@@ -4,6 +4,7 @@ import { AppFeature } from 'constants/appFeature';
 import { PluginType } from 'constants/pluginType';
 import { getUserQuery } from 'hooks/api/useUser';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { ACCENT_PRESETS, DEFAULT_ACCENT_ID } from 'themes/accent';
 import { queryClient } from 'utils/query/queryClient';
 
 import browser from '../../scripts/browser';
@@ -37,6 +38,14 @@ function fillThemes(select, selectedTheme) {
         // set the current theme
         select.value = selectedTheme || defaultTheme.id;
     });
+}
+
+function fillAccentColors(select, selectedAccent) {
+    select.innerHTML = ACCENT_PRESETS.map(preset => {
+        return `<option value="${preset.id}">${escapeHtml(globalize.translate(preset.label))}</option>`;
+    }).join('');
+
+    select.value = selectedAccent || DEFAULT_ACCENT_ID;
 }
 
 function loadScreensavers(context, userSettings) {
@@ -114,6 +123,7 @@ function loadForm(context, user, userSettings) {
 
     fillThemes(context.querySelector('#selectTheme'), userSettings.theme());
     fillThemes(context.querySelector('#selectDashboardTheme'), userSettings.dashboardTheme());
+    fillAccentColors(context.querySelector('#selectAccentColor'), userSettings.accentColor());
 
     loadScreensavers(context, userSettings);
 
@@ -161,6 +171,7 @@ function saveUser(context, user, userSettingsInstance, apiClient) {
     userSettingsInstance.enableThemeSongs(context.querySelector('#chkThemeSong').checked);
     userSettingsInstance.enableThemeVideos(context.querySelector('#chkThemeVideo').checked);
     userSettingsInstance.theme(context.querySelector('#selectTheme').value);
+    userSettingsInstance.accentColor(context.querySelector('#selectAccentColor').value);
     userSettingsInstance.dashboardTheme(context.querySelector('#selectDashboardTheme').value);
     userSettingsInstance.screensaver(context.querySelector('.selectScreensaver').value);
     userSettingsInstance.backdropScreensaverInterval(context.querySelector('#txtBackdropScreensaverInterval').value);

@@ -5,10 +5,10 @@ import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 
 import { ApiProvider } from 'hooks/useApi';
+import { useAppTheme } from 'hooks/useAppTheme';
 import { UserSettingsProvider } from 'hooks/useUserSettings';
 import { useUserTheme } from 'hooks/useUserTheme';
 import { WebConfigProvider } from 'hooks/useWebConfig';
-import appTheme from 'themes';
 import { queryClient } from 'utils/query/queryClient';
 
 /**
@@ -60,20 +60,31 @@ const RootContext: FC<PropsWithChildren> = ({ children }) => {
             <ApiProvider>
                 <UserSettingsProvider>
                     <WebConfigProvider>
-                        <ThemeProvider
-                            theme={appTheme}
-                            // Disable color scheme management since we're handling it manually
-                            colorSchemeNode={null}
-                            storageManager={null}
-                            disableStyleSheetGeneration
-                        >
+                        <NestedThemeProvider>
                             <CustomThemeProvider>
                                 {children}
                             </CustomThemeProvider>
-                        </ThemeProvider>
+                        </NestedThemeProvider>
                     </WebConfigProvider>
                 </UserSettingsProvider>
             </ApiProvider>
         </QueryClientProvider>
+    );
+};
+
+/** The theme provider of a nested root: the stylesheet comes from the main app, this one only supplies the theme. */
+const NestedThemeProvider: FC<PropsWithChildren> = ({ children }) => {
+    const theme = useAppTheme();
+
+    return (
+        <ThemeProvider
+            theme={theme}
+            // Disable color scheme management since we're handling it manually
+            colorSchemeNode={null}
+            storageManager={null}
+            disableStyleSheetGeneration
+        >
+            {children}
+        </ThemeProvider>
     );
 };

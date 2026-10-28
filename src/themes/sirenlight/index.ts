@@ -8,10 +8,11 @@ const theme = buildCustomColorScheme({
             default: '#f4f7fb',
             paper: '#ffffff'
         },
+        // One step deeper than the dark theme's teal so white text on a button reaches WCAG AA (5.5:1)
         primary: {
-            main: '#0d9488',
-            dark: '#0f766e',
-            light: '#14b8a6',
+            main: '#0f766e',
+            dark: '#115e59',
+            light: '#0d9488',
             contrastText: '#ffffff'
         },
         secondary: {
@@ -26,7 +27,7 @@ const theme = buildCustomColorScheme({
             secondary: 'rgba(15, 23, 42, 0.68)'
         },
         action: {
-            focus: 'rgba(13, 148, 136, 0.14)',
+            focus: 'rgba(15, 118, 110, 0.14)',
             hover: 'rgba(15, 23, 42, 0.05)',
             selectedOpacity: 0.12
         },

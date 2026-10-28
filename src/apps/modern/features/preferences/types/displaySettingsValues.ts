@@ -1,4 +1,5 @@
 export interface DisplaySettingsValues {
+    accentColor: string;
     customCss: string;
     dashboardTheme: string;
     dateTimeLocale: string;
