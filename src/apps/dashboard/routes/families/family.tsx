@@ -16,6 +16,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import Toast from 'apps/dashboard/components/Toast';
 import DeleteFamilyDialog from 'apps/dashboard/features/families/components/DeleteFamilyDialog';
+import FamilyLibrariesCard, { type FamilyLibrariesValues } from 'apps/dashboard/features/families/components/FamilyLibrariesCard';
 import FamilyMembersList from 'apps/dashboard/features/families/components/FamilyMembersList';
 import LinkUserDialog from 'apps/dashboard/features/families/components/LinkUserDialog';
 import { useLibraryMediaFolders } from 'apps/dashboard/features/users/api/useLibraryMediaFolders';
@@ -40,7 +41,7 @@ import {
 } from 'hooks/api/family/useFamilyMutations';
 import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
-import { getFamilyId, type SirenUserDto, toUpdateFamilyMemberRequest } from 'types/family';
+import { type FamilyMemberDto, getFamilyId, getFamilyLibraries, toUpdateFamilyMemberRequest } from 'types/family';
 
 type DialogName = 'add' | 'link' | 'rename' | 'delete';
 
@@ -48,8 +49,7 @@ export const Component = () => {
     const navigate = useNavigate();
     const { familyId } = useParams();
     const { data: family, isPending, isError } = useFamily(familyId);
-    const { data: membersData } = useFamilyMembers(familyId);
-    const members = membersData ?? [];
+    const { data: members = [] } = useFamilyMembers(familyId);
     const { data: users } = useUsers();
     const { data: mediaFolders } = useLibraryMediaFolders({ isHidden: false });
     const { data: parentalRatings } = useParentalRatings();
@@ -63,7 +63,8 @@ export const Component = () => {
     const deleteFamily = useDeleteFamily();
 
     const [ dialog, setDialog ] = useState<DialogName>();
-    const [ pinTarget, setPinTarget ] = useState<SirenUserDto>();
+    const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
+    const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
     const [ toastMessage, setToastMessage ] = useState<string>();
 
@@ -71,13 +72,16 @@ export const Component = () => {
         (users ?? []).filter(user => !getFamilyId(user) && !user.Policy?.IsAdministrator)
     ), [ users ]);
 
-    const libraries = mediaFolders?.Items ?? [];
+    const allLibraries = mediaFolders?.Items;
+    // A profile can only be granted libraries the family reaches.
+    const familyLibraries = useMemo(() => getFamilyLibraries(family, allLibraries ?? []), [ allLibraries, family ]);
     const isFull = !family || members.length >= family.MaxMembers;
     const isSaving = createMember.isPending || linkMember.isPending || updateMember.isPending
         || setPassword.isPending || removeMember.isPending || updateFamily.isPending || deleteFamily.isPending;
 
     const closeDialogs = useCallback(() => {
         setDialog(undefined);
+        setEditTarget(undefined);
         setPinTarget(undefined);
         setErrorMessage(undefined);
     }, []);
@@ -134,6 +138,23 @@ export const Component = () => {
         }), globalize.translate('SettingsSaved'));
     }, [ createMember, familyId, run ]);
 
+    const onEditSubmit = useCallback((values: FamilyMemberFormValues) => {
+        if (!familyId || !editTarget?.Id) return;
+        run(() => updateMember.mutateAsync({
+            familyId,
+            userId: editTarget.Id!,
+            body: {
+                ...toUpdateFamilyMemberRequest(editTarget),
+                Name: values.Name,
+                IsFamilyAdministrator: values.IsFamilyAdministrator,
+                IsDisabled: values.IsDisabled,
+                MaxParentalRating: values.MaxParentalRating,
+                EnableAllFolders: values.EnableAllFolders,
+                EnabledFolders: values.EnabledFolders
+            }
+        }), globalize.translate('SettingsSaved'));
+    }, [ editTarget, familyId, run, updateMember ]);
+
     const onLinkSubmit = useCallback((userId: string) => {
         if (!familyId) return;
         run(() => linkMember.mutateAsync({ familyId, userId }), globalize.translate('SettingsSaved'));
@@ -144,6 +165,11 @@ export const Component = () => {
         run(() => updateFamily.mutateAsync({ familyId, body: { Name } }), globalize.translate('SettingsSaved'));
     }, [ familyId, run, updateFamily ]);
 
+    const onLibrariesSave = useCallback((values: FamilyLibrariesValues) => {
+        if (!familyId) return;
+        run(() => updateFamily.mutateAsync({ familyId, body: values }), globalize.translate('SettingsSaved'));
+    }, [ familyId, run, updateFamily ]);
+
     const onDeleteConfirm = useCallback((deleteMembers: boolean) => {
         if (!familyId) return;
         run(async () => {
@@ -152,11 +178,12 @@ export const Component = () => {
         });
     }, [ deleteFamily, familyId, navigate, run ]);
 
-    const onEdit = useCallback((member: SirenUserDto) => {
-        navigate(`/dashboard/users/${member.Id}/profile`);
-    }, [ navigate ]);
+    const onEdit = useCallback((member: FamilyMemberDto) => {
+        setErrorMessage(undefined);
+        setEditTarget(member);
+    }, []);
 
-    const onSetPin = useCallback((member: SirenUserDto) => {
+    const onSetPin = useCallback((member: FamilyMemberDto) => {
         setErrorMessage(undefined);
         setPinTarget(member);
     }, []);
@@ -170,7 +197,19 @@ export const Component = () => {
         }), globalize.translate('SettingsSaved'));
     }, [ familyId, pinTarget, run, setPassword ]);
 
-    const onToggleFamilyAdmin = useCallback((member: SirenUserDto) => {
+    const onUnlock = useCallback((member: FamilyMemberDto) => {
+        if (!familyId || !member.Id) return;
+        run(() => updateMember.mutateAsync({
+            familyId,
+            userId: member.Id!,
+            body: {
+                ...toUpdateFamilyMemberRequest(member),
+                IsDisabled: false
+            }
+        }), globalize.translate('ProfileUnlocked'));
+    }, [ familyId, run, updateMember ]);
+
+    const onToggleFamilyAdmin = useCallback((member: FamilyMemberDto) => {
         if (!familyId || !member.Id) return;
         run(() => updateMember.mutateAsync({
             familyId,
@@ -182,7 +221,7 @@ export const Component = () => {
         }));
     }, [ familyId, run, updateMember ]);
 
-    const onUnlink = useCallback((member: SirenUserDto) => {
+    const onUnlink = useCallback((member: FamilyMemberDto) => {
         if (!familyId || !member.Id) return;
         const userId = member.Id;
         confirm({
@@ -196,7 +235,7 @@ export const Component = () => {
         });
     }, [ familyId, removeMember, run ]);
 
-    const onRemove = useCallback((member: SirenUserDto) => {
+    const onRemove = useCallback((member: FamilyMemberDto) => {
         if (!familyId || !member.Id) return;
         const userId = member.Id;
         confirm({
@@ -223,7 +262,7 @@ export const Component = () => {
                 {isError || !family ? (
                     <Alert severity='error'>{globalize.translate('FamilyLoadError')}</Alert>
                 ) : (
-                    <Stack spacing={3}>
+                    <Stack spacing={3} sx={{ minWidth: 0 }}>
                         <Box>
                             <Button
                                 component={Link}
@@ -236,7 +275,7 @@ export const Component = () => {
                                 {globalize.translate('Families')}
                             </Button>
                             <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap sx={{ mt: 1 }}>
-                                <Typography variant='h1' sx={{ mr: 0.5 }}>{family.Name}</Typography>
+                                <Typography variant='h1' sx={{ mr: 0.5, minWidth: 0, wordBreak: 'break-word' }}>{family.Name}</Typography>
                                 <IconButton size='small' aria-label={globalize.translate('ButtonRename')} onClick={onRenameClick}>
                                     <DriveFileRenameOutline fontSize='small' />
                                 </IconButton>
@@ -261,7 +300,7 @@ export const Component = () => {
                             <Alert severity='info'>{globalize.translate('FamilyFull', family.MaxMembers)}</Alert>
                         )}
 
-                        {errorMessage && !dialog && !pinTarget && (
+                        {errorMessage && !dialog && !editTarget && !pinTarget && (
                             <Alert severity='error' onClose={closeDialogs}>{errorMessage}</Alert>
                         )}
 
@@ -269,9 +308,17 @@ export const Component = () => {
                             members={members}
                             onEdit={onEdit}
                             onSetPin={onSetPin}
+                            onUnlock={onUnlock}
                             onToggleFamilyAdmin={onToggleFamilyAdmin}
                             onUnlink={onUnlink}
                             onRemove={onRemove}
+                        />
+
+                        <FamilyLibrariesCard
+                            family={family}
+                            libraries={allLibraries ?? []}
+                            isSaving={isSaving}
+                            onSave={onLibrariesSave}
                         />
 
                         <Paper variant='outlined' sx={{ borderRadius: 3, p: 2, borderColor: 'error.main' }}>
@@ -292,12 +339,23 @@ export const Component = () => {
             <FamilyMemberDialog
                 open={dialog === 'add'}
                 title={globalize.translate('AddFamilyProfile')}
-                libraries={libraries}
+                libraries={familyLibraries}
                 parentalRatings={parentalRatings ?? []}
                 isSaving={isSaving}
                 errorMessage={errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onAddSubmit}
+            />
+            <FamilyMemberDialog
+                open={!!editTarget}
+                title={globalize.translate('EditFamilyProfile')}
+                member={editTarget}
+                libraries={familyLibraries}
+                parentalRatings={parentalRatings ?? []}
+                isSaving={isSaving}
+                errorMessage={errorMessage}
+                onClose={closeDialogs}
+                onSubmit={onEditSubmit}
             />
             <LinkUserDialog
                 open={dialog === 'link'}
@@ -327,7 +385,7 @@ export const Component = () => {
             <FamilyPinDialog
                 open={!!pinTarget}
                 memberName={pinTarget?.Name}
-                hasPin={!!pinTarget?.HasPassword}
+                hasPin={!!pinTarget?.HasPin}
                 isSaving={isSaving}
                 errorMessage={errorMessage}
                 onClose={closeDialogs}

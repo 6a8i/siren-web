@@ -11,6 +11,7 @@ import React, { type FC, useCallback, useEffect, useState } from 'react';
 import globalize from 'lib/globalize';
 
 import { useFocusOnOpen } from './useFocusOnOpen';
+import { useFullScreenDialog } from './useFullScreenDialog';
 
 interface FamilyPinDialogProps {
     open: boolean
@@ -36,6 +37,7 @@ const FamilyPinDialog: FC<FamilyPinDialogProps> = ({
 }) => {
     const [ pin, setPin ] = useState('');
     const pinRef = useFocusOnOpen<HTMLInputElement>(open);
+    const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
         if (open) setPin('');
@@ -59,6 +61,7 @@ const FamilyPinDialog: FC<FamilyPinDialogProps> = ({
             open={open}
             onClose={onClose}
             fullWidth
+            fullScreen={fullScreen}
             maxWidth='xs'
             slotProps={{
                 paper: {

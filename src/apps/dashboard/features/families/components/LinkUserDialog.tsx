@@ -12,6 +12,7 @@ import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
 import React, { type FC, useCallback, useEffect, useState } from 'react';
 
+import { useFullScreenDialog } from 'components/family/useFullScreenDialog';
 import globalize from 'lib/globalize';
 import type { SirenUserDto } from 'types/family';
 
@@ -35,6 +36,7 @@ const LinkUserDialog: FC<LinkUserDialogProps> = ({
     onSubmit
 }) => {
     const [ userId, setUserId ] = useState('');
+    const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
         if (open) setUserId('');
@@ -54,6 +56,7 @@ const LinkUserDialog: FC<LinkUserDialogProps> = ({
             open={open}
             onClose={onClose}
             fullWidth
+            fullScreen={fullScreen}
             maxWidth='xs'
             slotProps={{
                 paper: {

@@ -3,6 +3,7 @@ import type { ApiClient } from 'jellyfin-apiclient';
 
 import viewContainer from 'components/viewContainer';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
+import { markProfileChosen } from 'utils/profileSelection';
 import { queryClient } from 'utils/query/queryClient';
 
 /** The connection manager hooks this onto every ApiClient; the typings do not declare it. */
@@ -60,6 +61,9 @@ export async function switchFamilyProfile(familyId: string, userId: string, pin 
     } else {
         apiClient.setAuthenticationInfo(result.AccessToken ?? undefined, result.User?.Id);
     }
+
+    // An explicit choice: the selector stays out of the way for the rest of the session.
+    markProfileChosen(apiClient.serverId(), userId);
 
     queryClient.clear();
     viewContainer.reset();

@@ -12,6 +12,7 @@ import React, { type FC, useCallback, useEffect, useState } from 'react';
 import globalize from 'lib/globalize';
 
 import { useFocusOnOpen } from './useFocusOnOpen';
+import { useFullScreenDialog } from './useFullScreenDialog';
 
 export interface FamilyNameFormValues {
     Name: string
@@ -45,6 +46,7 @@ const FamilyNameDialog: FC<FamilyNameDialogProps> = ({
 }) => {
     const [ values, setValues ] = useState<FamilyNameFormValues>({ Name: initialName, FirstProfileName: '', FirstProfilePin: '' });
     const nameRef = useFocusOnOpen<HTMLInputElement>(open);
+    const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
         if (open) setValues({ Name: initialName, FirstProfileName: '', FirstProfilePin: '' });
@@ -81,6 +83,7 @@ const FamilyNameDialog: FC<FamilyNameDialogProps> = ({
             open={open}
             onClose={onClose}
             fullWidth
+            fullScreen={fullScreen}
             maxWidth='xs'
             slotProps={{
                 paper: {

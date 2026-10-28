@@ -3,6 +3,7 @@ import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
 import Key from '@mui/icons-material/Key';
 import Lock from '@mui/icons-material/Lock';
+import LockOpen from '@mui/icons-material/LockOpen';
 import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -12,26 +13,29 @@ import ListItemText from '@mui/material/ListItemText';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Typography from '@mui/material/Typography';
-import React, { type FC, useCallback, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import type { SirenUserDto } from 'types/family';
+import type { FamilyMemberDto } from 'types/family';
 
 const AVATAR_SIZE = { xs: 88, sm: 112 };
 
 interface ProfileActions {
     /** Switch mode: the profile to switch to. */
-    onSelect: (member: SirenUserDto) => void
+    onSelect: (member: FamilyMemberDto) => void
     /** Manage mode (family administrators). */
-    onEdit: (member: SirenUserDto) => void
-    onSetPin: (member: SirenUserDto) => void
-    onRemove: (member: SirenUserDto) => void
+    onEdit: (member: FamilyMemberDto) => void
+    onSetPin: (member: FamilyMemberDto) => void
+    onUnlock: (member: FamilyMemberDto) => void
+    onRemove: (member: FamilyMemberDto) => void
 }
 
 interface ProfileGridProps extends ProfileActions {
-    members: SirenUserDto[]
+    members: FamilyMemberDto[]
     currentUserId?: string
+    /** The profile chosen last time on this device, offered as "Continue as X". */
+    lastProfileId?: string
     manage: boolean
     /** Shows the "add profile" tile (manage mode, family not full). */
     canAdd: boolean
@@ -39,17 +43,21 @@ interface ProfileGridProps extends ProfileActions {
 }
 
 interface ProfileTileProps extends ProfileActions {
-    member: SirenUserDto
+    member: FamilyMemberDto
     isCurrent: boolean
+    /** Highlighted as the profile to continue with, and focused first for keyboard and TV use. */
+    isContinue: boolean
     manage: boolean
 }
 
+/** Every tile is a real button: keyboard and TV remotes reach it with Tab or the arrows and press Enter. */
 const tileSx = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     gap: 1.25,
     width: '100%',
+    minWidth: 0,
     p: 1,
     borderRadius: 3,
     transition: 'transform 150ms ease',
@@ -64,19 +72,29 @@ const tileSx = {
 const ProfileTile: FC<ProfileTileProps> = ({
     member,
     isCurrent,
+    isContinue,
     manage,
     onSelect,
     onEdit,
     onSetPin,
+    onUnlock,
     onRemove
 }) => {
     const { api } = useApi();
     const [ anchorEl, setAnchorEl ] = useState<HTMLElement | null>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
     const isDisabled = !!member.Policy?.IsDisabled;
-    const hasPin = !!member.HasPassword;
+    const isLocked = member.IsLockedOut;
+    const hasPin = member.HasPin;
     const imageUrl = api && member.Id && member.PrimaryImageTag ?
         `${api.basePath}/Users/${member.Id}/Images/Primary?tag=${member.PrimaryImageTag}&maxWidth=320` :
         undefined;
+    const showContinue = isContinue && !manage;
+
+    // The "continue" tile takes the focus when the page opens, so a remote or keyboard confirms with one press.
+    useEffect(() => {
+        if (showContinue) buttonRef.current?.focus();
+    }, [ showContinue ]);
 
     const onClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
         if (manage) {
@@ -100,18 +118,25 @@ const ProfileTile: FC<ProfileTileProps> = ({
         onSetPin(member);
     }, [ member, onSetPin ]);
 
+    const onUnlockClick = useCallback(() => {
+        setAnchorEl(null);
+        onUnlock(member);
+    }, [ member, onUnlock ]);
+
     const onRemoveClick = useCallback(() => {
         setAnchorEl(null);
         onRemove(member);
     }, [ member, onRemove ]);
 
     return (
-        <Box sx={{ opacity: isDisabled && !manage ? 0.45 : 1 }}>
+        <Box sx={{ minWidth: 0, opacity: isDisabled && !manage ? 0.45 : 1 }}>
             <ButtonBase
+                ref={buttonRef}
                 focusRipple
                 onClick={onClick}
                 disabled={isDisabled && !manage}
-                aria-label={member.Name ?? undefined}
+                aria-label={showContinue ? globalize.translate('ContinueAs', member.Name ?? '') : (member.Name ?? undefined)}
+                aria-haspopup={manage ? 'menu' : undefined}
                 sx={tileSx}
             >
                 <Box sx={{ position: 'relative' }}>
@@ -126,7 +151,10 @@ const ProfileTile: FC<ProfileTileProps> = ({
                             fontWeight: 600,
                             borderRadius: '28%',
                             bgcolor: imageUrl ? 'background.paper' : 'primary.main',
-                            color: 'primary.contrastText'
+                            color: 'primary.contrastText',
+                            ...(showContinue && {
+                                boxShadow: '0 0 0 3px var(--siren-focus-ring, var(--jf-palette-primary-main))'
+                            })
                         }}
                     />
                     {(hasPin || manage) && (
@@ -158,10 +186,16 @@ const ProfileTile: FC<ProfileTileProps> = ({
                 >
                     {member.Name}
                 </Typography>
-                {isCurrent && (
-                    <Chip size='small' color='primary' label={globalize.translate('YouBadge')} />
+                {showContinue && (
+                    <Chip size='small' color='primary' label={globalize.translate('ContinueAs', member.Name ?? '')} sx={{ maxWidth: '100%' }} />
                 )}
-                {!isCurrent && isDisabled && (
+                {isCurrent && !showContinue && (
+                    <Chip size='small' color='primary' variant='outlined' label={globalize.translate('YouBadge')} />
+                )}
+                {isLocked && (
+                    <Chip size='small' color='warning' label={globalize.translate('ProfileLocked')} />
+                )}
+                {!isCurrent && !isLocked && isDisabled && (
                     <Chip size='small' label={globalize.translate('Disabled')} />
                 )}
             </ButtonBase>
@@ -176,6 +210,12 @@ const ProfileTile: FC<ProfileTileProps> = ({
                         <ListItemIcon><Key fontSize='small' /></ListItemIcon>
                         <ListItemText>{globalize.translate(hasPin ? 'ChangePin' : 'SetPin')}</ListItemText>
                     </MenuItem>
+                    {isLocked && (
+                        <MenuItem onClick={onUnlockClick}>
+                            <ListItemIcon><LockOpen fontSize='small' color='warning' /></ListItemIcon>
+                            <ListItemText>{globalize.translate('UnlockProfile')}</ListItemText>
+                        </MenuItem>
+                    )}
                     {!isCurrent && (
                         <MenuItem onClick={onRemoveClick} sx={{ color: 'error.main' }}>
                             <ListItemIcon><DeleteOutline fontSize='small' color='error' /></ListItemIcon>
@@ -192,56 +232,65 @@ const ProfileTile: FC<ProfileTileProps> = ({
 const ProfileGrid: FC<ProfileGridProps> = ({
     members,
     currentUserId,
+    lastProfileId,
     manage,
     canAdd,
     onAdd,
     ...actions
-}) => (
-    <Box
-        sx={{
-            display: 'grid',
-            gap: { xs: 1.5, sm: 3 },
-            justifyContent: 'center',
-            gridTemplateColumns: {
-                xs: 'repeat(auto-fit, minmax(110px, 140px))',
-                sm: 'repeat(auto-fit, minmax(140px, 160px))'
-            },
-            width: '100%'
-        }}
-    >
-        {members.map(member => (
-            <ProfileTile
-                key={member.Id}
-                member={member}
-                isCurrent={member.Id === currentUserId}
-                manage={manage}
-                {...actions}
-            />
-        ))}
-        {manage && canAdd && (
-            <ButtonBase focusRipple onClick={onAdd} sx={tileSx} aria-label={globalize.translate('AddFamilyProfile')}>
-                <Box
-                    className='profileAvatar'
-                    sx={{
-                        width: AVATAR_SIZE,
-                        height: AVATAR_SIZE,
-                        borderRadius: '28%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px dashed',
-                        borderColor: 'divider',
-                        color: 'text.secondary'
-                    }}
-                >
-                    <Add sx={{ fontSize: 40 }} />
-                </Box>
-                <Typography variant='subtitle1' component='span' sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                    {globalize.translate('AddFamilyProfile')}
-                </Typography>
-            </ButtonBase>
-        )}
-    </Box>
-);
+}) => {
+    // "Continue as": the last profile chosen on this device when it is still here, else the current one.
+    const continueId = members.some(member => member.Id === lastProfileId) ? lastProfileId : currentUserId;
+
+    return (
+        <Box
+            sx={{
+                display: 'grid',
+                gap: { xs: 1.5, sm: 3 },
+                justifyContent: 'center',
+                gridTemplateColumns: {
+                    xs: 'repeat(auto-fit, minmax(110px, 140px))',
+                    sm: 'repeat(auto-fit, minmax(140px, 160px))'
+                },
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0
+            }}
+        >
+            {members.map(member => (
+                <ProfileTile
+                    key={member.Id}
+                    member={member}
+                    isCurrent={member.Id === currentUserId}
+                    isContinue={!!member.Id && member.Id === continueId}
+                    manage={manage}
+                    {...actions}
+                />
+            ))}
+            {manage && canAdd && (
+                <ButtonBase focusRipple onClick={onAdd} sx={tileSx} aria-label={globalize.translate('AddFamilyProfile')}>
+                    <Box
+                        className='profileAvatar'
+                        sx={{
+                            width: AVATAR_SIZE,
+                            height: AVATAR_SIZE,
+                            borderRadius: '28%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '2px dashed',
+                            borderColor: 'divider',
+                            color: 'text.secondary'
+                        }}
+                    >
+                        <Add sx={{ fontSize: 40 }} />
+                    </Box>
+                    <Typography variant='subtitle1' component='span' sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                        {globalize.translate('AddFamilyProfile')}
+                    </Typography>
+                </ButtonBase>
+            )}
+        </Box>
+    );
+};
 
 export default ProfileGrid;

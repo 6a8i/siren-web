@@ -11,6 +11,7 @@ import RadioGroup from '@mui/material/RadioGroup';
 import Stack from '@mui/material/Stack';
 import React, { type FC, useCallback, useEffect, useState } from 'react';
 
+import { useFullScreenDialog } from 'components/family/useFullScreenDialog';
 import globalize from 'lib/globalize';
 import type { FamilyDto } from 'types/family';
 
@@ -36,6 +37,7 @@ const DeleteFamilyDialog: FC<DeleteFamilyDialogProps> = ({
     onConfirm
 }) => {
     const [ mode, setMode ] = useState(KEEP);
+    const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
         if (open) setMode(KEEP);
@@ -50,7 +52,7 @@ const DeleteFamilyDialog: FC<DeleteFamilyDialogProps> = ({
     }, [ mode, onConfirm ]);
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth='xs'>
+        <Dialog open={open} onClose={onClose} fullWidth fullScreen={fullScreen} maxWidth='xs'>
             <DialogTitle>{globalize.translate('DeleteFamily')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2}>

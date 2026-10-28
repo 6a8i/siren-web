@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { ApiClient, ConnectResponse } from 'jellyfin-apiclient';
 
 import { ConnectionState, ServerConnections } from 'lib/jellyfin-apiclient';
+import { shouldOpenProfileSelector } from 'utils/profileSelection';
 
 import ConnectionErrorPage from './ConnectionErrorPage';
 import Loading from './loading/LoadingComponent';
@@ -21,6 +22,7 @@ enum AccessLevel {
 type AccessLevelValue = `${AccessLevel}`;
 
 enum BounceRoutes {
+    Family = '/family',
     Home = '/home',
     Login = '/login',
     SelectServer = '/selectserver',
@@ -179,8 +181,18 @@ const ConnectionRequired: FunctionComponent<ConnectionRequiredProps> = ({
             }
         }
 
+        // A family member lands on "Who's watching?" instead of home until a profile is chosen in this
+        // session. Only the home route is diverted: deep links and the dashboard are left alone.
+        if (level === AccessLevel.User && location.pathname === BounceRoutes.Home && client
+            && await shouldOpenProfileSelector(client)
+        ) {
+            console.debug('[ConnectionRequired] no profile chosen yet, redirecting to the profile selector');
+            navigate(BounceRoutes.Family, { replace: true });
+            return;
+        }
+
         setIsLoading(false);
-    }, [bounce, level]);
+    }, [bounce, level, location.pathname, navigate]);
 
     useEffect(() => {
         // Check connection status on initial page load

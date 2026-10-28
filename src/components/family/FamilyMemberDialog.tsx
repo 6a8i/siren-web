@@ -14,19 +14,18 @@ import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import Select, { type SelectChangeEvent } from '@mui/material/Select';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import React, { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 
 import globalize from 'lib/globalize';
-import type { SirenUserDto } from 'types/family';
+import type { FamilyMemberDto, LibraryOption } from 'types/family';
 
 import { useFocusOnOpen } from './useFocusOnOpen';
+import { useFullScreenDialog } from './useFullScreenDialog';
 
-export interface LibraryOption {
-    Id?: string | null
-    Name?: string | null
-}
+export type { LibraryOption } from 'types/family';
 
 export interface FamilyMemberFormValues {
     Name: string
@@ -35,6 +34,7 @@ export interface FamilyMemberFormValues {
     IsFamilyAdministrator: boolean
     IsDisabled: boolean
     MaxParentalRating: number | null
+    /** All of the family's libraries (`HasAllFamilyFolders` on the member). */
     EnableAllFolders: boolean
     EnabledFolders: string[]
 }
@@ -43,8 +43,8 @@ interface FamilyMemberDialogProps {
     open: boolean
     title: string
     /** The profile being edited; none when creating. */
-    member?: SirenUserDto
-    /** Libraries the editor may grant: all of them for a server admin, their own for a family admin. */
+    member?: FamilyMemberDto
+    /** The libraries the family reaches: the only ones a profile may be granted. */
     libraries: LibraryOption[]
     parentalRatings: ParentalRating[]
     /** Editing your own profile: you cannot disable or demote yourself. */
@@ -57,13 +57,16 @@ interface FamilyMemberDialogProps {
 
 const NO_LIMIT = '';
 
-const toValues = (member?: SirenUserDto): FamilyMemberFormValues => ({
+/** The highest rating score still suitable for a child profile. */
+const CHILD_MAX_SCORE = 10;
+
+const toValues = (member?: FamilyMemberDto): FamilyMemberFormValues => ({
     Name: member?.Name ?? '',
     Password: '',
     IsFamilyAdministrator: !!member?.Policy?.IsFamilyAdministrator,
     IsDisabled: !!member?.Policy?.IsDisabled,
     MaxParentalRating: member?.Policy?.MaxParentalRating ?? null,
-    EnableAllFolders: member ? (member.Policy?.EnableAllFolders ?? true) : true,
+    EnableAllFolders: member ? member.HasAllFamilyFolders : true,
     EnabledFolders: member?.Policy?.EnabledFolders ?? []
 });
 
@@ -88,6 +91,15 @@ const groupRatings = (ratings: ParentalRating[]): RatingOption[] => {
     }
 
     return options;
+};
+
+/** The rating a child profile starts with: the highest one at or under the child cap, else the lowest there is. */
+export const getChildRating = (options: RatingOption[]): number | null => {
+    if (options.length === 0) return null;
+
+    const scores = options.map(option => option.score);
+    const suitable = scores.filter(score => score <= CHILD_MAX_SCORE);
+    return suitable.length > 0 ? Math.max(...suitable) : Math.min(...scores);
 };
 
 interface LibraryCheckboxProps {
@@ -128,12 +140,17 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
     onSubmit
 }) => {
     const [ values, setValues ] = useState<FamilyMemberFormValues>(() => toValues(member));
+    const [ isChild, setIsChild ] = useState(false);
     const ratingOptions = useMemo(() => groupRatings(parentalRatings), [ parentalRatings ]);
     const nameRef = useFocusOnOpen<HTMLInputElement>(open);
+    const fullScreen = useFullScreenDialog();
     const isEdit = !!member;
 
     useEffect(() => {
-        if (open) setValues(toValues(member));
+        if (open) {
+            setValues(toValues(member));
+            setIsChild(false);
+        }
     }, [ open, member ]);
 
     const onNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +162,12 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
         const Password = e.target.value;
         setValues(current => ({ ...current, Password }));
     }, []);
+
+    const onChildChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
+        setIsChild(checked);
+        const MaxParentalRating = checked ? getChildRating(ratingOptions) : null;
+        setValues(current => ({ ...current, MaxParentalRating }));
+    }, [ ratingOptions ]);
 
     const onRatingChange = useCallback((e: SelectChangeEvent) => {
         const value = e.target.value;
@@ -180,6 +203,7 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
             open={open}
             onClose={onClose}
             fullWidth
+            fullScreen={fullScreen}
             maxWidth='sm'
             slotProps={{
                 paper: {
@@ -219,6 +243,14 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
                         />
                     )}
 
+                    <FormControl>
+                        <FormControlLabel
+                            control={<Switch checked={isChild} onChange={onChildChange} />}
+                            label={globalize.translate('ChildProfile')}
+                        />
+                        <FormHelperText>{globalize.translate('ChildProfileHelp')}</FormHelperText>
+                    </FormControl>
+
                     <FormControl fullWidth>
                         <InputLabel id='family-member-rating-label'>
                             {globalize.translate('LabelMaxParentalRating')}
@@ -245,7 +277,7 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
                         <FormGroup>
                             <FormControlLabel
                                 control={<Checkbox checked={values.EnableAllFolders} onChange={onAllFoldersChange} />}
-                                label={globalize.translate('AllLibraries')}
+                                label={globalize.translate('AllFamilyLibraries')}
                             />
                             {!values.EnableAllFolders && libraries.map(library => (
                                 library.Id ? (
@@ -258,6 +290,9 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
                                     />
                                 ) : null
                             ))}
+                            {!values.EnableAllFolders && libraries.length === 0 && (
+                                <FormHelperText sx={{ ml: 2 }}>{globalize.translate('NoFamilyLibraries')}</FormHelperText>
+                            )}
                         </FormGroup>
                     </FormControl>
 

@@ -4,7 +4,9 @@ import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
 import Key from '@mui/icons-material/Key';
 import LinkOff from '@mui/icons-material/LinkOff';
+import LockOpen from '@mui/icons-material/LockOpen';
 import MoreVert from '@mui/icons-material/MoreVert';
+import OpenInNew from '@mui/icons-material/OpenInNew';
 import Chip from '@mui/material/Chip';
 import Divider from '@mui/material/Divider';
 import IconButton from '@mui/material/IconButton';
@@ -20,26 +22,28 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { formatDistanceToNow } from 'date-fns';
 import React, { type FC, useCallback, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import UserAvatar from 'components/UserAvatar';
 import globalize from 'lib/globalize';
-import type { SirenUserDto } from 'types/family';
+import type { FamilyMemberDto } from 'types/family';
 import { getLocaleWithSuffix } from 'utils/dateFnsLocale';
 
 interface MemberActions {
-    onEdit: (member: SirenUserDto) => void
-    onSetPin: (member: SirenUserDto) => void
-    onToggleFamilyAdmin: (member: SirenUserDto) => void
-    onUnlink: (member: SirenUserDto) => void
-    onRemove: (member: SirenUserDto) => void
+    onEdit: (member: FamilyMemberDto) => void
+    onSetPin: (member: FamilyMemberDto) => void
+    onUnlock: (member: FamilyMemberDto) => void
+    onToggleFamilyAdmin: (member: FamilyMemberDto) => void
+    onUnlink: (member: FamilyMemberDto) => void
+    onRemove: (member: FamilyMemberDto) => void
 }
 
 interface FamilyMembersListProps extends MemberActions {
-    members: SirenUserDto[]
+    members: FamilyMemberDto[]
 }
 
 interface FamilyMemberRowProps extends MemberActions {
-    member: SirenUserDto
+    member: FamilyMemberDto
 }
 
 const getLastSeen = (lastActivityDate?: string | null) => (
@@ -52,14 +56,17 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
     member,
     onEdit,
     onSetPin,
+    onUnlock,
     onToggleFamilyAdmin,
     onUnlink,
     onRemove
 }) => {
     const [ anchorEl, setAnchorEl ] = useState<HTMLElement | null>(null);
     const isFamilyAdmin = !!member.Policy?.IsFamilyAdministrator;
-    const hasPin = !!member.HasPassword;
+    const hasPin = member.HasPin;
+    const isLocked = member.IsLockedOut;
     const lastSeen = getLastSeen(member.LastActivityDate);
+    const userPageUrl = `/dashboard/users/${member.Id}/profile`;
 
     const onMenuOpen = useCallback((e: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(e.currentTarget);
@@ -78,6 +85,11 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
         setAnchorEl(null);
         onSetPin(member);
     }, [ member, onSetPin ]);
+
+    const onUnlockClick = useCallback(() => {
+        setAnchorEl(null);
+        onUnlock(member);
+    }, [ member, onUnlock ]);
 
     const onToggleAdminClick = useCallback(() => {
         setAnchorEl(null);
@@ -110,7 +122,7 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                 disableTypography
                 primary={(
                     <Stack direction='row' spacing={1} alignItems='center' flexWrap='wrap' useFlexGap>
-                        <Typography component='span' sx={{ fontWeight: 600 }}>
+                        <Typography component='span' sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
                             {member.Name}
                         </Typography>
                         {isFamilyAdmin && (
@@ -118,6 +130,9 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                         )}
                         {member.Policy?.IsDisabled && (
                             <Chip size='small' label={globalize.translate('Disabled')} />
+                        )}
+                        {isLocked && (
+                            <Chip size='small' color='warning' label={globalize.translate('ProfileLocked')} />
                         )}
                     </Stack>
                 )}
@@ -133,17 +148,27 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
             <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={onMenuClose}>
                 <MenuItem onClick={onEditClick}>
                     <ListItemIcon><Edit fontSize='small' /></ListItemIcon>
-                    <ListItemText>{globalize.translate('ButtonEditUser')}</ListItemText>
+                    <ListItemText>{globalize.translate('EditFamilyProfile')}</ListItemText>
                 </MenuItem>
                 <MenuItem onClick={onPinClick}>
                     <ListItemIcon><Key fontSize='small' /></ListItemIcon>
                     <ListItemText>{globalize.translate(hasPin ? 'ChangePin' : 'SetPin')}</ListItemText>
                 </MenuItem>
+                {isLocked && (
+                    <MenuItem onClick={onUnlockClick}>
+                        <ListItemIcon><LockOpen fontSize='small' color='warning' /></ListItemIcon>
+                        <ListItemText>{globalize.translate('UnlockProfile')}</ListItemText>
+                    </MenuItem>
+                )}
                 <MenuItem onClick={onToggleAdminClick}>
                     <ListItemIcon>
                         {isFamilyAdmin ? <CheckBox fontSize='small' color='primary' /> : <CheckBoxOutlineBlank fontSize='small' />}
                     </ListItemIcon>
                     <ListItemText>{globalize.translate('FamilyAdministrator')}</ListItemText>
+                </MenuItem>
+                <MenuItem component={Link} to={userPageUrl} onClick={onMenuClose}>
+                    <ListItemIcon><OpenInNew fontSize='small' /></ListItemIcon>
+                    <ListItemText>{globalize.translate('OpenFullUserPage')}</ListItemText>
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={onUnlinkClick}>

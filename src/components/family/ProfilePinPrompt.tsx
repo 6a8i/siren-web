@@ -11,10 +11,13 @@ import React, { type FC, useCallback, useEffect, useState } from 'react';
 import globalize from 'lib/globalize';
 
 import { useFocusOnOpen } from './useFocusOnOpen';
+import { useFullScreenDialog } from './useFullScreenDialog';
 
 interface ProfilePinPromptProps {
     open: boolean
     memberName?: string | null
+    /** The profile was locked after too many wrong PINs; the message replaces the wrong-PIN one. */
+    isLocked?: boolean
     isBusy?: boolean
     errorMessage?: string
     onClose: () => void
@@ -25,6 +28,7 @@ interface ProfilePinPromptProps {
 const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
     open,
     memberName,
+    isLocked = false,
     isBusy = false,
     errorMessage,
     onClose,
@@ -32,6 +36,7 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
 }) => {
     const [ pin, setPin ] = useState('');
     const pinRef = useFocusOnOpen<HTMLInputElement>(open);
+    const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
         if (open) setPin('');
@@ -51,6 +56,7 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
             open={open}
             onClose={onClose}
             fullWidth
+            fullScreen={fullScreen}
             maxWidth='xs'
             slotProps={{
                 paper: {
@@ -62,7 +68,9 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
             <DialogTitle>{globalize.translate('EnterPin', memberName ?? '')}</DialogTitle>
             <DialogContent>
                 <Stack spacing={2} sx={{ pt: 1 }}>
-                    {errorMessage && (
+                    {isLocked ? (
+                        <Alert severity='warning'>{globalize.translate('ProfileLockedOut')}</Alert>
+                    ) : errorMessage && (
                         <Alert severity='error'>{errorMessage}</Alert>
                     )}
                     <TextField
@@ -71,7 +79,8 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
                         label={globalize.translate('LabelPin')}
                         value={pin}
                         onChange={onPinChange}
-                        error={!!errorMessage}
+                        error={!!errorMessage && !isLocked}
+                        disabled={isLocked}
                         inputRef={pinRef}
                         fullWidth
                         autoComplete='current-password'
@@ -82,7 +91,7 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
                 <Button onClick={onClose} color='inherit' disabled={isBusy}>
                     {globalize.translate('ButtonCancel')}
                 </Button>
-                <Button type='submit' variant='contained' disabled={isBusy}>
+                <Button type='submit' variant='contained' disabled={isBusy || isLocked}>
                     {globalize.translate('SwitchProfile')}
                 </Button>
             </DialogActions>

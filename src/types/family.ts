@@ -10,6 +10,10 @@ export interface FamilyDto {
     DateCreated: string
     MemberCount: number
     MaxMembers: number
+    /** The family reaches every library on the server. */
+    EnableAllFolders: boolean
+    /** The libraries the family reaches when `EnableAllFolders` is false. */
+    EnabledFolders: string[]
 }
 
 /** The server-side cap; the real value comes with every FamilyDto. */
@@ -25,6 +29,16 @@ export type SirenUserDto = UserDto & {
     Policy?: SirenUserPolicy
 };
 
+/** A profile as the family endpoints return it: the user plus what the family pages need to know. */
+export type FamilyMemberDto = SirenUserDto & {
+    /** The profile asks for a PIN when switching to it. */
+    HasPin: boolean
+    /** Disabled by the server after too many wrong PIN attempts; an administrator unlocks it. */
+    IsLockedOut: boolean
+    /** The profile reaches every library the family reaches. */
+    HasAllFamilyFolders: boolean
+};
+
 export const getFamilyId = (user?: UserDto | null): string | undefined => (
     (user as SirenUserDto | null | undefined)?.FamilyId || undefined
 );
@@ -37,8 +51,11 @@ export interface CreateFamilyRequest {
     Name: string
 }
 
+/** Only server administrators may send the library fields. */
 export interface UpdateFamilyRequest {
-    Name: string
+    Name?: string
+    EnableAllFolders?: boolean
+    EnabledFolders?: string[]
 }
 
 export interface CreateFamilyMemberRequest {
@@ -46,7 +63,9 @@ export interface CreateFamilyMemberRequest {
     Password?: string
     IsFamilyAdministrator?: boolean
     MaxParentalRating?: number | null
+    /** All of the family's libraries. */
     EnableAllFolders?: boolean
+    /** Capped by the server to the libraries the family reaches. */
     EnabledFolders?: string[]
 }
 
@@ -54,9 +73,12 @@ export interface CreateFamilyMemberRequest {
 export interface UpdateFamilyMemberRequest {
     Name: string
     IsFamilyAdministrator: boolean
+    /** `false` also unlocks a locked-out profile. */
     IsDisabled: boolean
     MaxParentalRating: number | null
+    /** All of the family's libraries. */
     EnableAllFolders: boolean
+    /** Capped by the server to the libraries the family reaches. */
     EnabledFolders: string[]
 }
 
@@ -66,11 +88,23 @@ export interface FamilyMemberPasswordRequest {
 }
 
 /** The update request that leaves a member exactly as it is, to change one field from. */
-export const toUpdateFamilyMemberRequest = (member: SirenUserDto): UpdateFamilyMemberRequest => ({
+export const toUpdateFamilyMemberRequest = (member: FamilyMemberDto): UpdateFamilyMemberRequest => ({
     Name: member.Name ?? '',
     IsFamilyAdministrator: !!member.Policy?.IsFamilyAdministrator,
     IsDisabled: !!member.Policy?.IsDisabled,
     MaxParentalRating: member.Policy?.MaxParentalRating ?? null,
-    EnableAllFolders: member.Policy?.EnableAllFolders ?? true,
+    EnableAllFolders: member.HasAllFamilyFolders,
     EnabledFolders: member.Policy?.EnabledFolders ?? []
 });
+
+/** A library a profile may be granted, as any of the library listings returns it. */
+export interface LibraryOption {
+    Id?: string | null
+    Name?: string | null
+}
+
+/** The libraries the family reaches, out of a wider list. */
+export const getFamilyLibraries = <T extends LibraryOption>(family: FamilyDto | undefined, libraries: T[]): T[] => {
+    if (!family || family.EnableAllFolders) return libraries;
+    return libraries.filter(library => !!library.Id && family.EnabledFolders.includes(library.Id));
+};

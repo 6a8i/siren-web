@@ -6,7 +6,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useParentalRatings } from 'apps/dashboard/features/users/api/useParentalRatings';
@@ -32,8 +32,9 @@ import { useMyFamily } from 'hooks/api/family/useMyFamily';
 import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import { isFamilyAdministrator, type SirenUserDto, toUpdateFamilyMemberRequest } from 'types/family';
+import { type FamilyMemberDto, getFamilyLibraries, isFamilyAdministrator, toUpdateFamilyMemberRequest } from 'types/family';
 import { ProfileSwitchError, switchFamilyProfile } from 'utils/familySwitch';
+import { getLastProfileId, markProfileChosen } from 'utils/profileSelection';
 
 type DialogName = 'add' | 'rename';
 
@@ -44,12 +45,11 @@ type DialogName = 'add' | 'rename';
 const FamilyPage = () => {
     const navigate = useNavigate();
     const [ searchParams, setSearchParams ] = useSearchParams();
-    const { user: currentUser } = useApi();
+    const { user: currentUser, __legacyApiClient__: apiClient } = useApi();
     const { data: family, isPending, isError } = useMyFamily();
-    const { data: membersData, isPending: isMembersPending } = useFamilyMembers(family?.Id);
-    // A 401 turns any cached query into null (see utils/query/queryClient), so never trust the shape.
-    const members = membersData ?? [];
+    const { data: members = [], isPending: isMembersPending, refetch: refetchMembers } = useFamilyMembers(family?.Id);
     const { data: parentalRatings } = useParentalRatings();
+    // Family administrators have no dashboard: the libraries they can name are the ones they see themselves.
     const { data: views } = useUserViews();
 
     const createMember = useCreateFamilyMember();
@@ -58,14 +58,19 @@ const FamilyPage = () => {
     const removeMember = useRemoveFamilyMember();
     const updateFamily = useUpdateFamily();
 
+    const serverId = apiClient?.serverId() ?? currentUser?.ServerId ?? undefined;
+    const lastProfileId = useMemo(() => (serverId ? getLastProfileId(serverId) : undefined), [ serverId ]);
+    const ownViews = views?.Items;
+    const libraries = useMemo(() => getFamilyLibraries(family, ownViews ?? []), [ family, ownViews ]);
     const isAdmin = isFamilyAdministrator(currentUser);
     const manage = isAdmin && searchParams.get('manage') === '1';
 
     const [ dialog, setDialog ] = useState<DialogName>();
-    const [ editTarget, setEditTarget ] = useState<SirenUserDto>();
-    const [ pinTarget, setPinTarget ] = useState<SirenUserDto>();
-    const [ switchTarget, setSwitchTarget ] = useState<SirenUserDto>();
+    const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
+    const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
+    const [ switchTarget, setSwitchTarget ] = useState<FamilyMemberDto>();
     const [ isSwitching, setIsSwitching ] = useState(false);
+    const [ isSwitchLocked, setIsSwitchLocked ] = useState(false);
     const [ switchError, setSwitchError ] = useState<string>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
 
@@ -90,6 +95,7 @@ const FamilyPage = () => {
         setEditTarget(undefined);
         setPinTarget(undefined);
         setSwitchTarget(undefined);
+        setIsSwitchLocked(false);
         setSwitchError(undefined);
         setErrorMessage(undefined);
     }, []);
@@ -107,7 +113,19 @@ const FamilyPage = () => {
 
     // Switching
 
-    const startSwitch = useCallback((member: SirenUserDto, pin: string) => {
+    /** A wrong PIN and a locked profile both answer 401; the member list says which it is. */
+    const reportWrongPin = useCallback(async (member: FamilyMemberDto) => {
+        const { data } = await refetchMembers();
+        const fresh = data?.find(candidate => candidate.Id === member.Id);
+        if (fresh?.IsLockedOut) {
+            setIsSwitchLocked(true);
+            setSwitchError(undefined);
+        } else {
+            setSwitchError(globalize.translate('PinIncorrect'));
+        }
+    }, [ refetchMembers ]);
+
+    const startSwitch = useCallback((member: FamilyMemberDto, pin: string) => {
         if (!family || !member.Id) return;
 
         setIsSwitching(true);
@@ -117,28 +135,38 @@ const FamilyPage = () => {
             loading.hide();
             setIsSwitching(false);
             if (err instanceof ProfileSwitchError && err.isWrongPin) {
-                setSwitchError(globalize.translate('PinIncorrect'));
+                setSwitchTarget(current => current ?? member);
+                reportWrongPin(member).catch(() => {
+                    setSwitchError(globalize.translate('PinIncorrect'));
+                });
             } else {
                 console.error('[FamilyPage] profile switch failed', err);
                 setSwitchError(globalize.translate('ErrorDefault'));
-                if (!member.HasPassword) setErrorMessage(globalize.translate('ErrorDefault'));
+                if (!member.HasPin) setErrorMessage(globalize.translate('ErrorDefault'));
             }
         });
-    }, [ family ]);
+    }, [ family, reportWrongPin ]);
 
-    const onSelect = useCallback((member: SirenUserDto) => {
+    const onSelect = useCallback((member: FamilyMemberDto) => {
         if (member.Id === currentUser?.Id) {
+            // "Continue as" the current profile is a choice too: no selector again this session.
+            if (serverId && member.Id) markProfileChosen(serverId, member.Id);
             navigate('/home');
             return;
         }
 
-        if (member.HasPassword) {
+        if (member.IsLockedOut) {
             setSwitchError(undefined);
+            setIsSwitchLocked(true);
+            setSwitchTarget(member);
+        } else if (member.HasPin) {
+            setSwitchError(undefined);
+            setIsSwitchLocked(false);
             setSwitchTarget(member);
         } else {
             startSwitch(member, '');
         }
-    }, [ currentUser?.Id, navigate, startSwitch ]);
+    }, [ currentUser?.Id, navigate, serverId, startSwitch ]);
 
     const onPinPromptSubmit = useCallback((pin: string) => {
         if (switchTarget) startSwitch(switchTarget, pin);
@@ -156,12 +184,12 @@ const FamilyPage = () => {
         setDialog('rename');
     }, []);
 
-    const onEdit = useCallback((member: SirenUserDto) => {
+    const onEdit = useCallback((member: FamilyMemberDto) => {
         setErrorMessage(undefined);
         setEditTarget(member);
     }, []);
 
-    const onSetPin = useCallback((member: SirenUserDto) => {
+    const onSetPin = useCallback((member: FamilyMemberDto) => {
         setErrorMessage(undefined);
         setPinTarget(member);
     }, []);
@@ -198,6 +226,18 @@ const FamilyPage = () => {
         }));
     }, [ editTarget, family, run, updateMember ]);
 
+    const onUnlock = useCallback((member: FamilyMemberDto) => {
+        if (!family || !member.Id) return;
+        run(() => updateMember.mutateAsync({
+            familyId: family.Id,
+            userId: member.Id!,
+            body: {
+                ...toUpdateFamilyMemberRequest(member),
+                IsDisabled: false
+            }
+        }));
+    }, [ family, run, updateMember ]);
+
     const onPinSubmit = useCallback((pin: string | null) => {
         if (!family || !pinTarget?.Id) return;
         run(() => setPassword.mutateAsync({
@@ -212,7 +252,7 @@ const FamilyPage = () => {
         run(() => updateFamily.mutateAsync({ familyId: family.Id, body: { Name } }));
     }, [ family, run, updateFamily ]);
 
-    const onRemove = useCallback((member: SirenUserDto) => {
+    const onRemove = useCallback((member: FamilyMemberDto) => {
         if (!family || !member.Id) return;
         const familyId = family.Id;
         const userId = member.Id;
@@ -237,7 +277,7 @@ const FamilyPage = () => {
             title={globalize.translate('MyFamily')}
         >
             <div className='padded-left padded-right padded-bottom-page padded-top'>
-                <Stack spacing={4} alignItems='center' sx={{ maxWidth: 960, mx: 'auto', pt: { xs: 2, sm: 4 } }}>
+                <Stack spacing={4} alignItems='center' sx={{ maxWidth: 960, mx: 'auto', pt: { xs: 2, sm: 4 }, minWidth: 0 }}>
                     {isError && (
                         <Alert severity='error'>{globalize.translate('FamilyLoadError')}</Alert>
                     )}
@@ -258,8 +298,8 @@ const FamilyPage = () => {
                                 <Typography variant='h1' sx={{ fontSize: { xs: '1.6rem', sm: '2.2rem' } }}>
                                     {globalize.translate(manage ? 'ManageProfiles' : 'WhoIsWatching')}
                                 </Typography>
-                                <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' sx={{ mt: 1 }}>
-                                    <Typography color='text.secondary'>{family.Name}</Typography>
+                                <Stack direction='row' spacing={0.5} alignItems='center' justifyContent='center' flexWrap='wrap' useFlexGap sx={{ mt: 1 }}>
+                                    <Typography color='text.secondary' sx={{ wordBreak: 'break-word' }}>{family.Name}</Typography>
                                     {manage && (
                                         <Button
                                             size='small'
@@ -281,12 +321,14 @@ const FamilyPage = () => {
                             <ProfileGrid
                                 members={members}
                                 currentUserId={currentUser?.Id}
+                                lastProfileId={lastProfileId}
                                 manage={manage}
                                 canAdd={!isFull}
                                 onAdd={onAddClick}
                                 onSelect={onSelect}
                                 onEdit={onEdit}
                                 onSetPin={onSetPin}
+                                onUnlock={onUnlock}
                                 onRemove={onRemove}
                             />
 
@@ -315,6 +357,7 @@ const FamilyPage = () => {
             <ProfilePinPrompt
                 open={!!switchTarget}
                 memberName={switchTarget?.Name}
+                isLocked={isSwitchLocked}
                 isBusy={isSwitching}
                 errorMessage={switchError}
                 onClose={closeDialogs}
@@ -323,7 +366,7 @@ const FamilyPage = () => {
             <FamilyMemberDialog
                 open={dialog === 'add'}
                 title={globalize.translate('AddFamilyProfile')}
-                libraries={views?.Items ?? []}
+                libraries={libraries}
                 parentalRatings={parentalRatings ?? []}
                 isSaving={isSaving}
                 errorMessage={errorMessage}
@@ -334,7 +377,7 @@ const FamilyPage = () => {
                 open={!!editTarget}
                 title={globalize.translate('EditFamilyProfile')}
                 member={editTarget}
-                libraries={views?.Items ?? []}
+                libraries={libraries}
                 parentalRatings={parentalRatings ?? []}
                 isSelf={!!editTarget && editTarget.Id === currentUser?.Id}
                 isSaving={isSaving}
@@ -345,7 +388,7 @@ const FamilyPage = () => {
             <FamilyPinDialog
                 open={!!pinTarget}
                 memberName={pinTarget?.Name}
-                hasPin={!!pinTarget?.HasPassword}
+                hasPin={!!pinTarget?.HasPin}
                 isSaving={isSaving}
                 errorMessage={errorMessage}
                 onClose={closeDialogs}

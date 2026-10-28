@@ -11,8 +11,8 @@ import type {
     CreateFamilyMemberRequest,
     CreateFamilyRequest,
     FamilyDto,
+    FamilyMemberDto,
     FamilyMemberPasswordRequest,
-    SirenUserDto,
     UpdateFamilyMemberRequest,
     UpdateFamilyRequest
 } from 'types/family';
@@ -56,11 +56,11 @@ export const deleteFamily = (api: Api, familyId: string, deleteMembers: boolean)
 );
 
 export const getFamilyMembers = (api: Api, familyId: string, options?: AxiosRequestConfig) => (
-    api.axiosInstance.get<SirenUserDto[]>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Members`), withAuth(api, options))
+    api.axiosInstance.get<FamilyMemberDto[]>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Members`), withAuth(api, options))
 );
 
 export const createFamilyMember = (api: Api, familyId: string, body: CreateFamilyMemberRequest) => (
-    api.axiosInstance.post<SirenUserDto>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Members`), body, withAuth(api))
+    api.axiosInstance.post<FamilyMemberDto>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Members`), body, withAuth(api))
 );
 
 /** Moves an existing user (without a family, not a server administrator) into the family. */
