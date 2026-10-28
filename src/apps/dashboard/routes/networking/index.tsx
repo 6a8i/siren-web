@@ -22,8 +22,16 @@ import Button from '@mui/material/Button';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import { getSystemApi } from '@jellyfin/sdk/lib/utils/api/system-api';
 import { QUERY_KEY as CONFIG_QUERY_KEY, useNamedConfiguration } from 'hooks/useNamedConfiguration';
+import { QUERY_KEY as SERVER_CONFIG_QUERY_KEY, useConfiguration } from 'hooks/useConfiguration';
 import { queryClient } from 'utils/query/queryClient';
 import { encodePublishedServerUris, getPublishedServerUris, PublishedServerUris, splitString } from 'apps/dashboard/features/networking/utils';
+import {
+    applySecuritySettings,
+    CSP_MODE_LABELS,
+    CSP_MODES,
+    getSecuritySettings,
+    type SirenServerConfiguration
+} from 'apps/dashboard/features/networking/security';
 import { ActionData } from 'types/actionData';
 import Switch from '@mui/material/Switch';
 
@@ -68,11 +76,19 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     newConfig.PublishedServerUriBySubnet = encodePublishedServerUris(publishedServerUri);
 
+    // The security settings live on the server configuration, not on the network one.
+    const { data: serverConfig } = await getSystemApi(api).getConfiguration();
+    await getSystemApi(api)
+        .updateConfiguration({ serverConfiguration: applySecuritySettings(serverConfig, data) });
+
     await getSystemApi(api)
         .updateNamedConfiguration({ key: CONFIG_KEY, body: newConfig });
 
     void queryClient.invalidateQueries({
         queryKey: [ CONFIG_QUERY_KEY, CONFIG_KEY ]
+    });
+    void queryClient.invalidateQueries({
+        queryKey: [ SERVER_CONFIG_QUERY_KEY ]
     });
 
     return {
@@ -82,6 +98,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export const Component = () => {
     const { data: config, isPending, isError } = useNamedConfiguration<NetworkConfiguration>(CONFIG_KEY);
+    const {
+        data: serverConfig,
+        isPending: isServerConfigPending,
+        isError: isServerConfigError
+    } = useConfiguration();
     const navigation = useNavigation();
     const actionData = useActionData() as ActionData | undefined;
     const isSubmitting = navigation.state === 'submitting';
@@ -130,7 +151,9 @@ export const Component = () => {
         }
     }, [config, isPending, isError]);
 
-    if (isPending || !isUrisLoaded) return <Loading />;
+    if (isPending || isServerConfigPending || !isUrisLoaded) return <Loading />;
+
+    const security = getSecuritySettings((serverConfig ?? {}) as SirenServerConfiguration);
 
     return (
         <Page
@@ -139,7 +162,7 @@ export const Component = () => {
             className='type-interior mainAnimatedPage'
         >
             <Box className='content-primary'>
-                {isError ? (
+                {isError || isServerConfigError ? (
                     <Alert severity='error'>{globalize.translate('NetworkingPageLoadError')}</Alert>
                 ) : (
                     <Form method='POST'>
@@ -299,6 +322,49 @@ export const Component = () => {
                                     label={globalize.translate('LabelPublicHttpsPort')}
                                     helperText={globalize.translate('LabelPublicHttpsPortHelp')}
                                     defaultValue={config.PublicHttpsPort}
+                                />
+                            </Stack>
+
+                            <Stack spacing={3}>
+                                <Typography variant='h2'>{globalize.translate('HeaderSecurity')}</Typography>
+
+                                <FormControl>
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                name='EnableSecurityHeaders'
+                                                defaultChecked={security.EnableSecurityHeaders}
+                                            />
+                                        }
+                                        label={globalize.translate('LabelEnableSecurityHeaders')}
+                                    />
+                                    <FormHelperText>{globalize.translate('LabelEnableSecurityHeadersHelp')}</FormHelperText>
+                                </FormControl>
+
+                                <TextField
+                                    name='ContentSecurityPolicyMode'
+                                    label={globalize.translate('LabelContentSecurityPolicyMode')}
+                                    helperText={globalize.translate('LabelContentSecurityPolicyModeHelp')}
+                                    select
+                                    defaultValue={security.ContentSecurityPolicyMode}
+                                >
+                                    {CSP_MODES.map(mode => (
+                                        <MenuItem key={mode} value={mode}>{globalize.translate(CSP_MODE_LABELS[mode])}</MenuItem>
+                                    ))}
+                                </TextField>
+
+                                <TextField
+                                    name='AuthenticationRateLimitPerMinute'
+                                    type='number'
+                                    label={globalize.translate('LabelAuthenticationRateLimit')}
+                                    helperText={globalize.translate('LabelAuthenticationRateLimitHelp')}
+                                    defaultValue={security.AuthenticationRateLimitPerMinute}
+                                    slotProps={{
+                                        htmlInput: {
+                                            min: 0,
+                                            step: 1
+                                        }
+                                    }}
                                 />
                             </Stack>
 
