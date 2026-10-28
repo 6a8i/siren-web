@@ -60,6 +60,14 @@ const ItemCountsWidget = () => {
     } = useItemCounts();
 
     const cards: MetricCardProps[] = useMemo(() => {
+        // A library with no typed counter (home videos, photos, mixed) still has items to show.
+        if (!isPending && counts && !CARD_DEFINITIONS.some(def => def.metrics.some(({ key }) => counts[key]))) {
+            return counts.ItemCount ? [{
+                Icon: VideoLibrary,
+                metrics: [{ label: globalize.translate('Items'), value: counts.ItemCount }]
+            }] : [];
+        }
+
         return CARD_DEFINITIONS
             .filter(def => (
                 // Include all cards while the request is pending

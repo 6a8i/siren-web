@@ -1,3 +1,4 @@
+import type { ItemCounts } from '@jellyfin/sdk/lib/generated-client/models/item-counts';
 import type { TaskInfo } from '@jellyfin/sdk/lib/generated-client/models/task-info';
 import { TaskState } from '@jellyfin/sdk/lib/generated-client/models/task-state';
 import Devices from '@mui/icons-material/Devices';
@@ -21,6 +22,17 @@ import useLiveSessions from 'apps/dashboard/features/sessions/hooks/useLiveSessi
 import { useLocale } from 'hooks/useLocale';
 import globalize from 'lib/globalize';
 import { toDecimalString } from 'utils/number';
+
+const LIBRARY_KINDS: { key: keyof ItemCounts, i18n: string }[] = [
+    { key: 'MovieCount', i18n: 'Movies' },
+    { key: 'SeriesCount', i18n: 'Series' },
+    { key: 'EpisodeCount', i18n: 'Episodes' },
+    { key: 'AlbumCount', i18n: 'Albums' },
+    { key: 'SongCount', i18n: 'Songs' },
+    { key: 'MusicVideoCount', i18n: 'MusicVideos' },
+    { key: 'BookCount', i18n: 'Books' },
+    { key: 'BoxSetCount', i18n: 'Collections' }
+];
 
 interface TileProps {
     Icon: typeof SvgIcon
@@ -110,10 +122,23 @@ const OverviewTiles: FC<OverviewTilesProps> = ({ tasks }) => {
         tasks?.filter(task => task.State === TaskState.Running) ?? []
     ), [ tasks ]);
 
-    const titleCount = counts ? (counts.MovieCount ?? 0) + (counts.SeriesCount ?? 0) : undefined;
-    const libraryDetail = counts ?
-        `${counts.MovieCount ?? 0} ${globalize.translate('Movies')} · ${counts.SeriesCount ?? 0} ${globalize.translate('Series')}` :
-        '';
+    // The two biggest kinds of content, or a plain item count for libraries that have no typed counter
+    // (home videos, photos, mixed content).
+    const libraryDetail = useMemo(() => {
+        if (!counts) return '';
+
+        const kinds = LIBRARY_KINDS
+            .map(({ key, i18n }) => ({ value: counts[key] ?? 0, label: globalize.translate(i18n) }))
+            .filter(kind => kind.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 2);
+
+        if (kinds.length === 0) {
+            return `${counts.ItemCount ?? 0} ${globalize.translate('Items')}`;
+        }
+
+        return kinds.map(kind => `${kind.value} ${kind.label}`).join(' · ');
+    }, [ counts ]);
 
     return (
         <Box
@@ -140,7 +165,7 @@ const OverviewTiles: FC<OverviewTilesProps> = ({ tasks }) => {
             <Tile
                 Icon={VideoLibrary}
                 label={globalize.translate('HeaderLibraries')}
-                value={titleCount}
+                value={counts?.ItemCount}
                 detail={libraryDetail}
                 to='/dashboard/libraries'
             />

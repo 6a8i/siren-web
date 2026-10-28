@@ -152,6 +152,14 @@ function validatePath(path, validateWriteable, apiClient) {
     });
 }
 
+/**
+ * Cleans a path typed or pasted into the picker: Explorer's "Copy as path" wraps it in quotes,
+ * which the server then takes literally and rejects.
+ */
+function normalizePathInput(value) {
+    return (value || '').trim().replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1');
+}
+
 function initEditor(content, options, fileOptions) {
     content.addEventListener('click', e => {
         const lnkPath = dom.parentWithClass(e.target, 'lnkPath');
@@ -167,7 +175,7 @@ function initEditor(content, options, fileOptions) {
 
     content.addEventListener('click', e => {
         if (dom.parentWithClass(e.target, 'btnRefreshDirectories')) {
-            const path = content.querySelector('#txtDirectoryPickerPath').value;
+            const path = normalizePathInput(content.querySelector('#txtDirectoryPickerPath').value);
             refreshDirectoryBrowser(content, path, fileOptions);
         }
     });
@@ -175,13 +183,13 @@ function initEditor(content, options, fileOptions) {
     content.addEventListener('change', e => {
         const txtDirectoryPickerPath = dom.parentWithTag(e.target, 'INPUT');
         if (txtDirectoryPickerPath && txtDirectoryPickerPath.id === 'txtDirectoryPickerPath') {
-            refreshDirectoryBrowser(content, txtDirectoryPickerPath.value, fileOptions);
+            refreshDirectoryBrowser(content, normalizePathInput(txtDirectoryPickerPath.value), fileOptions);
         }
     });
 
     content.querySelector('form').addEventListener('submit', function(e) {
         if (options.callback) {
-            const path = this.querySelector('#txtDirectoryPickerPath').value;
+            const path = normalizePathInput(this.querySelector('#txtDirectoryPickerPath').value);
             validatePath(path, options.validateWriteable, ApiClient)
                 .then(options.callback(path))
                 .catch(() => { /* no-op */ });
