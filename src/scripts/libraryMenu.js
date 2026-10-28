@@ -155,15 +155,17 @@ function updateUserInHeader(user) {
             headerHomeButton.classList.remove('hide');
         }
 
+        const policy = user.Policy ? user.Policy : user.localUser.Policy;
+        // A child profile neither searches nor casts.
+        const isChild = !!policy?.IsChildProfile;
+
         if (headerSearchButton) {
-            headerSearchButton.classList.remove('hide');
+            headerSearchButton.classList.toggle('hide', isChild);
         }
 
         if (!layoutManager.tv) {
-            headerCastButton.classList.remove('hide');
+            headerCastButton.classList.toggle('hide', isChild);
         }
-
-        const policy = user.Policy ? user.Policy : user.localUser.Policy;
 
         if (
         // Button is present

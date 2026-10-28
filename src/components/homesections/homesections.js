@@ -3,6 +3,8 @@ import { DEFAULT_SECTIONS, HomeSectionType } from 'constants/homeSectionType';
 import { getUserViewsQuery } from 'hooks/api/useUserViews';
 import globalize from 'lib/globalize';
 import ServerConnections from 'lib/jellyfin-apiclient/ServerConnections';
+import { isChildProfile } from 'types/family';
+import { getChildHomeSections } from 'utils/childProfile';
 import Dashboard from 'utils/dashboard';
 import { queryClient } from 'utils/query/queryClient';
 
@@ -29,7 +31,12 @@ export function getDefaultSection(index) {
     return DEFAULT_SECTIONS[index];
 }
 
-function getAllSectionsToShow(userSettings) {
+export function getAllSectionsToShow(userSettings, user) {
+    // A child profile gets a fixed home page, whatever its settings say.
+    if (isChildProfile(user)) {
+        return getChildHomeSections(MAX_SECTIONS);
+    }
+
     const sections = [];
     for (let i = 0, length = MAX_SECTIONS; i < length; i++) {
         let section = userSettings.get('homesection' + i) || getDefaultSection(i);
@@ -74,7 +81,7 @@ export function loadSections(elem, apiClient, user, userSettings) {
                 elem.innerHTML = html;
                 elem.classList.add('homeSectionsContainer');
 
-                const promises = getAllSectionsToShow(userSettings)
+                const promises = getAllSectionsToShow(userSettings, user)
                     .map((section, index) => (
                         loadSection(elem, apiClient, user, userSettings, userViews, section, index)
                     ));

@@ -17,17 +17,18 @@ import ListItemText from '@mui/material/ListItemText';
 import ListSubheader from '@mui/material/ListSubheader';
 import Menu, { MenuProps } from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
-import React, { FC, useCallback } from 'react';
+import React, { FC, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { appHost } from 'components/apphost';
+import FamilyAdminPinDialog from 'components/family/FamilyAdminPinDialog';
 import { THEME_CHOICES, useThemeChoice } from 'components/theme/ThemeQuickSwitch';
 import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
 import globalize from 'lib/globalize';
 import shell from 'scripts/shell';
-import { getFamilyId, isFamilyAdministrator } from 'types/family';
+import { getFamilyId, isChildProfile, isFamilyAdministrator } from 'types/family';
 import Dashboard from 'utils/dashboard';
 
 export const ID = 'app-user-menu';
@@ -46,6 +47,23 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
     const { current: currentThemeChoice, apply: applyThemeChoice } = useThemeChoice();
     const familyId = getFamilyId(user);
     const isFamilyAdmin = isFamilyAdministrator(user);
+    const isChild = isChildProfile(user);
+    const [ isPinDialogOpen, setIsPinDialogOpen ] = useState(false);
+
+    // A child profile signs out only with a family administrator's PIN.
+    const onChildLogoutClick = useCallback(() => {
+        onMenuClose();
+        setIsPinDialogOpen(true);
+    }, [ onMenuClose ]);
+
+    const onPinDialogClose = useCallback(() => {
+        setIsPinDialogOpen(false);
+    }, []);
+
+    const onPinVerified = useCallback(() => {
+        setIsPinDialogOpen(false);
+        Dashboard.logout();
+    }, []);
 
     const onThemeChoiceClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
         const id = e.currentTarget.dataset.theme;
@@ -79,6 +97,48 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
         Dashboard.selectServer();
         onMenuClose();
     }, [ onMenuClose ]);
+
+    if (isChild) {
+        // Switching profiles and signing out: no settings, no dashboard, no theme.
+        return (
+            <>
+                <Menu
+                    anchorEl={anchorEl}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    id={ID}
+                    keepMounted
+                    open={open}
+                    onClose={onMenuClose}
+                >
+                    {familyId && (
+                        <MenuItem component={Link} to='/family' onClick={onMenuClose}>
+                            <ListItemIcon>
+                                <SwitchAccount />
+                            </ListItemIcon>
+                            <ListItemText>
+                                {globalize.translate('SwitchProfile')}
+                            </ListItemText>
+                        </MenuItem>
+                    )}
+                    <MenuItem onClick={onChildLogoutClick}>
+                        <ListItemIcon>
+                            <Logout />
+                        </ListItemIcon>
+                        <ListItemText>
+                            {globalize.translate('ButtonSignOut')}
+                        </ListItemText>
+                    </MenuItem>
+                </Menu>
+                <FamilyAdminPinDialog
+                    open={isPinDialogOpen}
+                    description={globalize.translate('ChildSignOutNeedsAdminPin')}
+                    onClose={onPinDialogClose}
+                    onVerified={onPinVerified}
+                />
+            </>
+        );
+    }
 
     return (
         <Menu

@@ -34,6 +34,8 @@ export interface FamilyMemberFormValues {
     /** Only read when creating a profile; an existing profile's PIN has its own dialog. */
     Password: string
     IsFamilyAdministrator: boolean
+    /** A child profile: never a family administrator, and the app hides what a child should not reach. */
+    IsChildProfile: boolean
     IsDisabled: boolean
     MaxParentalRating: number | null
     /** All of the family's libraries (`HasAllFamilyFolders` on the member). */
@@ -71,6 +73,7 @@ const toValues = (member?: FamilyMemberDto): FamilyMemberFormValues => ({
     Name: member?.Name ?? '',
     Password: '',
     IsFamilyAdministrator: !!member?.Policy?.IsFamilyAdministrator,
+    IsChildProfile: !!member?.Policy?.IsChildProfile,
     IsDisabled: !!member?.Policy?.IsDisabled,
     MaxParentalRating: member?.Policy?.MaxParentalRating ?? null,
     EnableAllFolders: member ? member.HasAllFamilyFolders : true,
@@ -149,17 +152,14 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
     onSubmit
 }) => {
     const [ values, setValues ] = useState<FamilyMemberFormValues>(() => toValues(member));
-    const [ isChild, setIsChild ] = useState(false);
     const ratingOptions = useMemo(() => groupRatings(parentalRatings), [ parentalRatings ]);
     const nameRef = useFocusOnOpen<HTMLInputElement>(open);
     const fullScreen = useFullScreenDialog();
     const isEdit = !!member;
+    const isChild = values.IsChildProfile;
 
     useEffect(() => {
-        if (open) {
-            setValues(toValues(member));
-            setIsChild(false);
-        }
+        if (open) setValues(toValues(member));
     }, [ open, member ]);
 
     const onNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,10 +172,14 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
         setValues(current => ({ ...current, Password }));
     }, []);
 
-    const onChildChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-        setIsChild(checked);
-        const MaxParentalRating = checked ? getChildRating(ratingOptions) : null;
-        setValues(current => ({ ...current, MaxParentalRating }));
+    /** Turning the switch on pre-selects a child rating and drops the administrator flag, which a child cannot hold. */
+    const onChildChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, IsChildProfile: boolean) => {
+        setValues(current => ({
+            ...current,
+            IsChildProfile,
+            MaxParentalRating: IsChildProfile ? getChildRating(ratingOptions) : current.MaxParentalRating,
+            IsFamilyAdministrator: IsChildProfile ? false : current.IsFamilyAdministrator
+        }));
     }, [ ratingOptions ]);
 
     const onRatingChange = useCallback((e: SelectChangeEvent) => {
@@ -331,12 +335,14 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
                                 <Checkbox
                                     checked={values.IsFamilyAdministrator}
                                     onChange={onFamilyAdminChange}
-                                    disabled={isSelf}
+                                    disabled={isSelf || isChild}
                                 />
                             )}
                             label={globalize.translate('FamilyAdministrator')}
                         />
-                        <FormHelperText>{globalize.translate('FamilyAdministratorHelp')}</FormHelperText>
+                        <FormHelperText>
+                            {globalize.translate(isChild ? 'ChildProfileCannotBeAdmin' : 'FamilyAdministratorHelp')}
+                        </FormHelperText>
                     </FormControl>
 
                     {isEdit && (

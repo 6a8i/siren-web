@@ -3,6 +3,7 @@ import React from 'react';
 
 import ConnectionRequired from 'components/ConnectionRequired';
 import { toAsyncPageRoute } from 'components/router/AsyncRoute';
+import ChildProfileGuard from 'components/router/ChildProfileGuard';
 import { toViewManagerPageRoute } from 'components/router/LegacyRoute';
 import ErrorBoundary from 'components/router/ErrorBoundary';
 import FallbackRoute from 'components/router/FallbackRoute';
@@ -23,8 +24,14 @@ export const APP_ROUTES: RouteObject[] = [
                 /* User routes */
                 Component: ConnectionRequired,
                 children: [
-                    ...ASYNC_USER_ROUTES.map(toAsyncPageRoute),
-                    ...LEGACY_USER_ROUTES.map(toViewManagerPageRoute)
+                    {
+                        // A child profile needs a family administrator's PIN for the settings pages
+                        Component: ChildProfileGuard,
+                        children: [
+                            ...ASYNC_USER_ROUTES.map(toAsyncPageRoute),
+                            ...LEGACY_USER_ROUTES.map(toViewManagerPageRoute)
+                        ]
+                    }
                 ],
                 ErrorBoundary
             },

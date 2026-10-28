@@ -22,6 +22,8 @@ export const DEFAULT_MAX_FAMILY_MEMBERS = 6;
 /** Siren adds family fields the generated SDK types do not know about. */
 export type SirenUserPolicy = UserPolicy & {
     IsFamilyAdministrator?: boolean
+    /** A child's profile: fixed home sections, no search, cast or settings, and an administrator's PIN to sign out. */
+    IsChildProfile?: boolean
 };
 
 export type SirenUserDto = UserDto & {
@@ -59,6 +61,39 @@ export const isFamilyAdministrator = (user?: UserDto | null): boolean => (
     !!(user?.Policy as SirenUserPolicy | null | undefined)?.IsFamilyAdministrator
 );
 
+export const isChildProfile = (user?: UserDto | null): boolean => (
+    !!(user?.Policy as SirenUserPolicy | null | undefined)?.IsChildProfile
+);
+
+/** One item a profile played, newest first, as `GET /Families/{id}/Members/{userId}/History` returns it. */
+export interface FamilyHistoryEntryDto {
+    ItemId: string
+    Name: string
+    SeriesName?: string | null
+    SeasonName?: string | null
+    /** The item kind (Movie, Episode, Audio, ...). */
+    Type: string
+    /** When it was last played (ISO 8601, UTC). */
+    Date: string
+    PlayedPercentage?: number | null
+    Completed: boolean
+    /** The primary image tag, when the item has one. */
+    ImageTag?: string | null
+}
+
+/** A device signed in as one of the family's profiles, as `GET /Families/{id}/Devices` returns it. */
+export interface FamilyDeviceDto {
+    Id: string
+    Name: string
+    AppName: string
+    AppVersion: string
+    UserId: string
+    UserName: string
+    DateLastActivity: string
+    /** The device the caller is using right now; it cannot be disconnected from here. */
+    IsCurrent: boolean
+}
+
 export interface CreateFamilyRequest {
     Name: string
 }
@@ -74,6 +109,8 @@ export interface CreateFamilyMemberRequest {
     Name: string
     Password?: string
     IsFamilyAdministrator?: boolean
+    /** A child profile cannot be a family administrator (the server answers 400). */
+    IsChildProfile?: boolean
     MaxParentalRating?: number | null
     /** All of the family's libraries. */
     EnableAllFolders?: boolean
@@ -85,6 +122,8 @@ export interface CreateFamilyMemberRequest {
 export interface UpdateFamilyMemberRequest {
     Name: string
     IsFamilyAdministrator: boolean
+    /** A child profile cannot be a family administrator (the server answers 400). */
+    IsChildProfile: boolean
     /** `false` also unlocks a locked-out profile. */
     IsDisabled: boolean
     MaxParentalRating: number | null
@@ -103,6 +142,7 @@ export interface FamilyMemberPasswordRequest {
 export const toUpdateFamilyMemberRequest = (member: FamilyMemberDto): UpdateFamilyMemberRequest => ({
     Name: member.Name ?? '',
     IsFamilyAdministrator: !!member.Policy?.IsFamilyAdministrator,
+    IsChildProfile: !!member.Policy?.IsChildProfile,
     IsDisabled: !!member.Policy?.IsDisabled,
     MaxParentalRating: member.Policy?.MaxParentalRating ?? null,
     EnableAllFolders: member.HasAllFamilyFolders,

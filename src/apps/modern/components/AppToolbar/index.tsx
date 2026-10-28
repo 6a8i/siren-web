@@ -5,6 +5,8 @@ import { useLocation } from 'react-router-dom';
 import { appRouter, PUBLIC_PATHS } from 'components/router/appRouter';
 import BaseToolbar from 'components/toolbar/AppToolbar';
 import ServerButton from 'components/toolbar/ServerButton';
+import { useApi } from 'hooks/useApi';
+import { isChildProfile } from 'types/family';
 
 import RemotePlayButton from './RemotePlayButton';
 import SyncPlayButton from './SyncPlayButton';
@@ -23,6 +25,9 @@ const AppToolbar: FC<AppToolbarProps> = ({
     onDrawerButtonClick
 }) => {
     const location = useLocation();
+    const { user } = useApi();
+    // A child profile neither searches nor casts: the toolbar keeps SyncPlay and the user menu only.
+    const isChild = isChildProfile(user);
 
     // The video osd does not show the standard toolbar
     if (location.pathname === '/video') return null;
@@ -38,8 +43,8 @@ const AppToolbar: FC<AppToolbarProps> = ({
             buttons={!isPublicPath && (
                 <>
                     <SyncPlayButton />
-                    <RemotePlayButton />
-                    <SearchButton />
+                    {!isChild && <RemotePlayButton />}
+                    {!isChild && <SearchButton />}
                 </>
             )}
             isDrawerAvailable={isDrawerAvailable}

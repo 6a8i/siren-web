@@ -10,7 +10,9 @@ import type { AxiosRequestConfig } from 'axios';
 import type {
     CreateFamilyMemberRequest,
     CreateFamilyRequest,
+    FamilyDeviceDto,
     FamilyDto,
+    FamilyHistoryEntryDto,
     FamilyLibraryDto,
     FamilyMemberDto,
     FamilyMemberPasswordRequest,
@@ -96,6 +98,36 @@ export const setFamilyMemberPassword = (api: Api, familyId: string, userId: stri
 
 export const removeFamilyMember = (api: Api, familyId: string, userId: string, deleteUser: boolean) => (
     api.axiosInstance.delete<void>(memberUrl(api, familyId, userId, `?deleteUser=${deleteUser}`), withAuth(api))
+);
+
+/** The last items a member played, newest first: the member, a family administrator or a server administrator. */
+export const getFamilyHistory = (api: Api, familyId: string, userId: string, limit = 50, options?: AxiosRequestConfig) => (
+    api.axiosInstance.get<FamilyHistoryEntryDto[]>(memberUrl(api, familyId, userId, `/History?limit=${limit}`), withAuth(api, options))
+);
+
+/** The devices signed in as the family's profiles (family or server administrator). */
+export const getFamilyDevices = (api: Api, familyId: string, options?: AxiosRequestConfig) => (
+    api.axiosInstance.get<FamilyDeviceDto[]>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Devices`), withAuth(api, options))
+);
+
+/** Signs a device out of the family profile it is using; the caller's own device answers 400. */
+export const disconnectFamilyDevice = (api: Api, familyId: string, deviceId: string) => (
+    api.axiosInstance.delete<void>(
+        familiesUrl(api, `/${encodeURIComponent(familyId)}/Devices/${encodeURIComponent(deviceId)}`),
+        withAuth(api)
+    )
+);
+
+/**
+ * Checks a family administrator's PIN without switching to them: Jellyfin's own login endpoint
+ * answers 200 with a token (discarded), 401 for a wrong PIN and 403 for a locked or disabled profile.
+ */
+export const verifyFamilyAdminPin = (api: Api, username: string, pin: string) => (
+    api.axiosInstance.post<AuthenticationResult>(
+        `${api.basePath}/Users/AuthenticateByName`,
+        { Username: username, Pw: pin },
+        withAuth(api)
+    )
 );
 
 export const switchFamilyMember = (api: Api, familyId: string, userId: string, pw = '') => (

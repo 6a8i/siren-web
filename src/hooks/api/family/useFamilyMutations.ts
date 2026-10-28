@@ -19,6 +19,7 @@ import {
     deleteFamily,
     deleteFamilyMemberImage,
     deleteUserImage,
+    disconnectFamilyDevice,
     linkFamilyMember,
     removeFamilyMember,
     setFamilyMemberImage,
@@ -29,7 +30,7 @@ import {
     updateFamilyMember
 } from 'utils/sdk/family-api';
 
-import { FAMILIES_QUERY_KEY } from './queryKeys';
+import { FAMILIES_QUERY_KEY, FAMILY_DEVICES_QUERY_KEY, FAMILY_SESSIONS_QUERY_KEY } from './queryKeys';
 
 const HTTP_NOT_FOUND = 404;
 const HTTP_METHOD_NOT_ALLOWED = 405;
@@ -167,6 +168,21 @@ export const useSetFamilyMemberImage = () => {
             }
         },
         onSuccess: invalidateFamilies
+    });
+};
+
+/** Signs a device out of the family profile it uses; the device and session lists refresh right after. */
+export const useDisconnectFamilyDevice = () => {
+    const { api } = useApi();
+
+    return useMutation({
+        mutationFn: ({ familyId, deviceId }: { familyId: string, deviceId: string }) => (
+            disconnectFamilyDevice(api!, familyId, deviceId)
+        ),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: [ FAMILY_DEVICES_QUERY_KEY ] });
+            void queryClient.invalidateQueries({ queryKey: [ FAMILY_SESSIONS_QUERY_KEY ] });
+        }
     });
 };
 
