@@ -2,6 +2,7 @@ import Add from '@mui/icons-material/Add';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
 import Face from '@mui/icons-material/Face';
+import History from '@mui/icons-material/History';
 import Key from '@mui/icons-material/Key';
 import Lock from '@mui/icons-material/Lock';
 import LockOpen from '@mui/icons-material/LockOpen';
@@ -19,7 +20,7 @@ import React, { type FC, useCallback, useEffect, useRef, useState } from 'react'
 import LockedChip from 'components/family/LockedChip';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import type { FamilyMemberDto } from 'types/family';
+import { type FamilyMemberDto, isChildProfile } from 'types/family';
 import { isMemberLockedOut } from 'utils/lockout';
 import { getUserImageUrl } from 'utils/userImage';
 
@@ -34,6 +35,7 @@ interface ProfileActions {
     onEdit: (member: FamilyMemberDto) => void
     onSetPin: (member: FamilyMemberDto) => void
     onAvatar: (member: FamilyMemberDto) => void
+    onHistory: (member: FamilyMemberDto) => void
     onUnlock: (member: FamilyMemberDto) => void
     onRemove: (member: FamilyMemberDto) => void
 }
@@ -89,6 +91,7 @@ const ProfileTile: FC<ProfileTileProps> = ({
     onEdit,
     onSetPin,
     onAvatar,
+    onHistory,
     onUnlock,
     onRemove
 }) => {
@@ -96,6 +99,7 @@ const ProfileTile: FC<ProfileTileProps> = ({
     const [ anchorEl, setAnchorEl ] = useState<HTMLElement | null>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const isDisabled = !!member.Policy?.IsDisabled;
+    const isChild = isChildProfile(member);
     const isLocked = isMemberLockedOut(member, now);
     const hasPin = member.HasPin;
     const imageUrl = getUserImageUrl(api, member.Id, member.PrimaryImageTag, AVATAR_IMAGE_WIDTH);
@@ -132,6 +136,11 @@ const ProfileTile: FC<ProfileTileProps> = ({
         setAnchorEl(null);
         onAvatar(member);
     }, [ member, onAvatar ]);
+
+    const onHistoryClick = useCallback(() => {
+        setAnchorEl(null);
+        onHistory(member);
+    }, [ member, onHistory ]);
 
     const onUnlockClick = useCallback(() => {
         setAnchorEl(null);
@@ -219,6 +228,9 @@ const ProfileTile: FC<ProfileTileProps> = ({
                 {!isCurrent && !isLocked && isDisabled && (
                     <Chip size='small' label={globalize.translate('Disabled')} />
                 )}
+                {isChild && (
+                    <Chip size='small' color='secondary' variant='outlined' label={globalize.translate('ChildProfileBadge')} />
+                )}
             </ButtonBase>
 
             {manage && (
@@ -234,6 +246,10 @@ const ProfileTile: FC<ProfileTileProps> = ({
                     <MenuItem onClick={onAvatarClick}>
                         <ListItemIcon><Face fontSize='small' /></ListItemIcon>
                         <ListItemText>{globalize.translate('ProfileAvatar')}</ListItemText>
+                    </MenuItem>
+                    <MenuItem onClick={onHistoryClick}>
+                        <ListItemIcon><History fontSize='small' /></ListItemIcon>
+                        <ListItemText>{globalize.translate('WatchHistory')}</ListItemText>
                     </MenuItem>
                     {isLocked && (
                         <MenuItem onClick={onUnlockClick}>

@@ -1,3 +1,4 @@
+import AddPhotoAlternate from '@mui/icons-material/AddPhotoAlternate';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -9,9 +10,11 @@ import DialogTitle from '@mui/material/DialogTitle';
 import Stack from '@mui/material/Stack';
 import SvgIcon from '@mui/material/SvgIcon';
 import Typography from '@mui/material/Typography';
-import React, { type FC, useCallback, useEffect, useState } from 'react';
+import React, { type FC, useCallback, useEffect, useRef, useState } from 'react';
 
 import globalize from 'lib/globalize';
+import type { ImageUpload } from 'types/family';
+import { isImageFile, renderAvatarPhoto } from 'utils/avatarPhoto';
 import {
     AVATAR_COLORS,
     AVATAR_GLYPHS,
@@ -20,7 +23,9 @@ import {
     type AvatarPreset,
     getAvatarColor,
     getAvatarGlyph,
-    getDefaultAvatarPreset
+    getDefaultAvatarPreset,
+    parseDataUrl,
+    renderAvatarUpload
 } from 'utils/avatarPreset';
 
 import { useFullScreenDialog } from './useFullScreenDialog';
@@ -33,7 +38,8 @@ interface AvatarPresetDialogProps {
     isSaving?: boolean
     errorMessage?: string
     onClose: () => void
-    onSave: (preset: AvatarPreset) => void
+    /** The image to upload: the preset rendered to a PNG, or the chosen photo centre-cropped. */
+    onSave: (image: ImageUpload) => void
     onRemove: () => void
 }
 
@@ -117,8 +123,9 @@ const GlyphButton: FC<GlyphButtonProps> = ({ glyph, colorHex, selected, onSelect
 };
 
 /**
- * Picks a preset avatar for a profile: one of eight background colours and one of twelve glyphs,
- * previewed live. Saving renders the pair to a PNG and uploads it as the profile image.
+ * Picks an avatar for a profile: one of eight background colours and one of twelve glyphs, or a
+ * photo of one's own, previewed live. Saving renders the choice on a 256×256 canvas and uploads
+ * it as the profile image.
  */
 const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
     open,
@@ -131,23 +138,55 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
     onRemove
 }) => {
     const [ preset, setPreset ] = useState<AvatarPreset>(() => getDefaultAvatarPreset(memberName));
+    /** The chosen photo, already cropped, as a data URL; picking a colour or a glyph drops it. */
+    const [ photo, setPhoto ] = useState<string>();
+    const [ photoError, setPhotoError ] = useState<string>();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const fullScreen = useFullScreenDialog();
 
     useEffect(() => {
-        if (open) setPreset(getDefaultAvatarPreset(memberName));
+        if (open) {
+            setPreset(getDefaultAvatarPreset(memberName));
+            setPhoto(undefined);
+            setPhotoError(undefined);
+        }
     }, [ open, memberName ]);
 
     const onColorSelect = useCallback((color: string) => {
+        setPhoto(undefined);
         setPreset(current => ({ ...current, color }));
     }, []);
 
     const onGlyphSelect = useCallback((glyph: string) => {
+        setPhoto(undefined);
         setPreset(current => ({ ...current, glyph }));
     }, []);
 
+    const onUploadClick = useCallback(() => {
+        fileInputRef.current?.click();
+    }, []);
+
+    const onFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        // The same file picked twice in a row must fire again.
+        e.target.value = '';
+        if (!file) return;
+
+        if (!isImageFile(file)) {
+            setPhotoError(globalize.translate('InvalidImageFile'));
+            return;
+        }
+
+        setPhotoError(undefined);
+        renderAvatarPhoto(file).then(setPhoto).catch((err: unknown) => {
+            console.error('[AvatarPresetDialog] failed to read the photo', err);
+            setPhotoError(globalize.translate('InvalidImageFile'));
+        });
+    }, []);
+
     const onSaveClick = useCallback(() => {
-        onSave(preset);
-    }, [ onSave, preset ]);
+        onSave(photo ? parseDataUrl(photo) : renderAvatarUpload(preset));
+    }, [ onSave, photo, preset ]);
 
     const color = getAvatarColor(preset.color) ?? AVATAR_COLORS[0];
     const glyph = getAvatarGlyph(preset.glyph) ?? AVATAR_GLYPHS[0];
@@ -160,8 +199,8 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
             </DialogTitle>
             <DialogContent>
                 <Stack spacing={2.5} sx={{ pt: 1 }}>
-                    {errorMessage && (
-                        <Alert severity='error'>{errorMessage}</Alert>
+                    {(errorMessage || photoError) && (
+                        <Alert severity='error'>{errorMessage ?? photoError}</Alert>
                     )}
 
                     <Box
@@ -173,6 +212,8 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
                             height: PREVIEW_SIZE,
                             borderRadius: '28%',
                             bgcolor: color.hex,
+                            backgroundImage: photo ? `url(${photo})` : undefined,
+                            backgroundSize: 'cover',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -180,7 +221,20 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
                             transition: 'background-color 150ms ease'
                         }}
                     >
-                        <GlyphIcon glyph={glyph} size={PREVIEW_SIZE * 0.58} />
+                        {!photo && <GlyphIcon glyph={glyph} size={PREVIEW_SIZE * 0.58} />}
+                    </Box>
+
+                    <Box sx={{ alignSelf: 'center' }}>
+                        <input
+                            ref={fileInputRef}
+                            type='file'
+                            accept='image/*'
+                            onChange={onFileChange}
+                            hidden
+                        />
+                        <Button variant='outlined' color='inherit' startIcon={<AddPhotoAlternate />} onClick={onUploadClick} disabled={isSaving}>
+                            {globalize.translate('UploadPhoto')}
+                        </Button>
                     </Box>
 
                     <Box>
@@ -192,7 +246,7 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
                                 <ColorSwatch
                                     key={option.id}
                                     color={option}
-                                    selected={option.id === color.id}
+                                    selected={!photo && option.id === color.id}
                                     onSelect={onColorSelect}
                                 />
                             ))}
@@ -209,7 +263,7 @@ const AvatarPresetDialog: FC<AvatarPresetDialogProps> = ({
                                     key={option.id}
                                     glyph={option}
                                     colorHex={color.hex}
-                                    selected={option.id === glyph.id}
+                                    selected={!photo && option.id === glyph.id}
                                     onSelect={onGlyphSelect}
                                 />
                             ))}

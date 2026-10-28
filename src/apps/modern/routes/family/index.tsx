@@ -9,12 +9,15 @@ import Typography from '@mui/material/Typography';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import Toast from 'apps/dashboard/components/Toast';
 import { useParentalRatings } from 'apps/dashboard/features/users/api/useParentalRatings';
+import FamilyDevices from 'apps/modern/features/family/components/FamilyDevices';
 import FamilySessions from 'apps/modern/features/family/components/FamilySessions';
 import ProfileGrid from 'apps/modern/features/family/components/ProfileGrid';
 import confirm from 'components/confirm/confirm';
 import { getApiErrorMessage } from 'components/family/apiError';
 import AvatarPresetDialog from 'components/family/AvatarPresetDialog';
+import FamilyHistoryDialog from 'components/family/FamilyHistoryDialog';
 import FamilyMemberDialog, { type FamilyMemberFormValues } from 'components/family/FamilyMemberDialog';
 import FamilyNameDialog, { type FamilyNameFormValues } from 'components/family/FamilyNameDialog';
 import FamilyPinDialog from 'components/family/FamilyPinDialog';
@@ -23,11 +26,13 @@ import { useLockoutClock } from 'components/family/useLockoutClock';
 import loading from 'components/loading/loading';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
+import { useFamilyDevices } from 'hooks/api/family/useFamilyDevices';
 import { useFamilyLibraries } from 'hooks/api/family/useFamilyLibraries';
 import { useFamilyMembers } from 'hooks/api/family/useFamilyMembers';
 import {
     useCreateFamilyMember,
     useDeleteFamilyMemberImage,
+    useDisconnectFamilyDevice,
     useRemoveFamilyMember,
     useSetFamilyMemberImage,
     useSetFamilyMemberPassword,
@@ -39,8 +44,13 @@ import { useFamilySessions } from 'hooks/api/family/useFamilySessions';
 import { useMyFamily } from 'hooks/api/family/useMyFamily';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import { type FamilyMemberDto, isFamilyAdministrator, toUpdateFamilyMemberRequest } from 'types/family';
-import { type AvatarPreset, renderAvatarUpload } from 'utils/avatarPreset';
+import {
+    type FamilyDeviceDto,
+    type FamilyMemberDto,
+    type ImageUpload,
+    isFamilyAdministrator,
+    toUpdateFamilyMemberRequest
+} from 'types/family';
 import { ProfileSwitchError, switchFamilyProfile } from 'utils/familySwitch';
 import { isMemberLockedOut } from 'utils/lockout';
 import { getLastProfileId, markProfileChosen } from 'utils/profileSelection';
@@ -68,8 +78,10 @@ const FamilyPage = () => {
     // Every library the family reaches, by name: a family administrator may grant ones they cannot see.
     const { data: libraries = [] } = useFamilyLibraries(isAdmin ? family?.Id : undefined);
     const sessions = useFamilySessions(manage && !!family);
+    const devices = useFamilyDevices(manage ? family?.Id : undefined);
 
     const createMember = useCreateFamilyMember();
+    const disconnectDevice = useDisconnectFamilyDevice();
     const updateMember = useUpdateFamilyMember();
     const unlockMember = useUnlockFamilyMember();
     const setPassword = useSetFamilyMemberPassword();
@@ -91,10 +103,12 @@ const FamilyPage = () => {
     const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
     const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
     const [ avatarTarget, setAvatarTarget ] = useState<FamilyMemberDto>();
+    const [ historyTarget, setHistoryTarget ] = useState<FamilyMemberDto>();
     const [ switchTarget, setSwitchTarget ] = useState<FamilyMemberDto>();
     const [ isSwitching, setIsSwitching ] = useState(false);
     const [ switchError, setSwitchError ] = useState<string>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
+    const [ toastMessage, setToastMessage ] = useState<string>();
 
     const isSaving = createMember.isPending || updateMember.isPending || unlockMember.isPending
         || setPassword.isPending || setImage.isPending || deleteImage.isPending
@@ -128,9 +142,14 @@ const FamilyPage = () => {
         setEditTarget(undefined);
         setPinTarget(undefined);
         setAvatarTarget(undefined);
+        setHistoryTarget(undefined);
         setSwitchTarget(undefined);
         setSwitchError(undefined);
         setErrorMessage(undefined);
+    }, []);
+
+    const onToastClose = useCallback(() => {
+        setToastMessage(undefined);
     }, []);
 
     const run = useCallback((action: () => Promise<unknown>, onDone: () => void = closeDialogs) => {
@@ -232,6 +251,11 @@ const FamilyPage = () => {
         setAvatarTarget(member);
     }, []);
 
+    const onHistory = useCallback((member: FamilyMemberDto) => {
+        setErrorMessage(undefined);
+        setHistoryTarget(member);
+    }, []);
+
     /** From the edit dialog: the picker opens on top of it, and the edit form keeps its changes. */
     const onEditAvatarClick = useCallback(() => {
         if (editTarget) onAvatar(editTarget);
@@ -245,6 +269,7 @@ const FamilyPage = () => {
                 Name: values.Name,
                 Password: values.Password || undefined,
                 IsFamilyAdministrator: values.IsFamilyAdministrator,
+                IsChildProfile: values.IsChildProfile,
                 MaxParentalRating: values.MaxParentalRating,
                 EnableAllFolders: values.EnableAllFolders,
                 EnabledFolders: values.EnabledFolders
@@ -261,6 +286,7 @@ const FamilyPage = () => {
                 ...toUpdateFamilyMemberRequest(editTarget),
                 Name: values.Name,
                 IsFamilyAdministrator: values.IsFamilyAdministrator,
+                IsChildProfile: values.IsChildProfile,
                 IsDisabled: values.IsDisabled,
                 MaxParentalRating: values.MaxParentalRating,
                 EnableAllFolders: values.EnableAllFolders,
@@ -289,13 +315,10 @@ const FamilyPage = () => {
         setErrorMessage(undefined);
     }, []);
 
-    const onAvatarSave = useCallback((preset: AvatarPreset) => {
+    const onAvatarSave = useCallback((image: ImageUpload) => {
         if (!family || !avatarTarget?.Id) return;
         const userId = avatarTarget.Id;
-        run(async () => {
-            const image = renderAvatarUpload(preset);
-            await setImage.mutateAsync({ familyId: family.Id, userId, isSelf: userId === currentUser?.Id, image });
-        }, closeAvatarDialog);
+        run(() => setImage.mutateAsync({ familyId: family.Id, userId, isSelf: userId === currentUser?.Id, image }), closeAvatarDialog);
     }, [ avatarTarget, closeAvatarDialog, currentUser?.Id, family, run, setImage ]);
 
     const onAvatarRemove = useCallback(() => {
@@ -324,6 +347,22 @@ const FamilyPage = () => {
             // cancelled
         });
     }, [ family, removeMember, run ]);
+
+    const onDisconnectDevice = useCallback((device: FamilyDeviceDto) => {
+        if (!family) return;
+        const familyId = family.Id;
+        confirm({
+            title: globalize.translate('DisconnectDevice'),
+            text: globalize.translate('DisconnectDeviceConfirmation', device.Name, device.UserName),
+            confirmText: globalize.translate('DisconnectDevice')
+        }).then(() => {
+            run(() => disconnectDevice.mutateAsync({ familyId, deviceId: device.Id }), () => {
+                setToastMessage(globalize.translate('DeviceDisconnected'));
+            });
+        }).catch(() => {
+            // cancelled
+        });
+    }, [ disconnectDevice, family, run ]);
 
     if (isPending || (family && isMembersPending)) return <Loading />;
 
@@ -371,7 +410,7 @@ const FamilyPage = () => {
                                 </Stack>
                             </Box>
 
-                            {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && !switchTarget && (
+                            {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && !historyTarget && !switchTarget && (
                                 <Alert severity='error' onClose={closeDialogs} sx={{ width: '100%' }}>{errorMessage}</Alert>
                             )}
 
@@ -387,6 +426,7 @@ const FamilyPage = () => {
                                 onEdit={onEdit}
                                 onSetPin={onSetPin}
                                 onAvatar={onAvatar}
+                                onHistory={onHistory}
                                 onUnlock={onUnlock}
                                 onRemove={onRemove}
                             />
@@ -403,6 +443,16 @@ const FamilyPage = () => {
                                     currentUserId={currentUser?.Id}
                                     isPending={sessions.isPending}
                                     isError={sessions.isError}
+                                />
+                            )}
+
+                            {manage && (
+                                <FamilyDevices
+                                    devices={devices.data}
+                                    isPending={devices.isPending}
+                                    isError={devices.isError}
+                                    isBusy={disconnectDevice.isPending}
+                                    onDisconnect={onDisconnectDevice}
                                 />
                             )}
 
@@ -483,6 +533,18 @@ const FamilyPage = () => {
                 errorMessage={errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onRenameSubmit}
+            />
+            <FamilyHistoryDialog
+                open={!!historyTarget}
+                familyId={family?.Id}
+                userId={historyTarget?.Id ?? undefined}
+                memberName={historyTarget?.Name}
+                onClose={closeDialogs}
+            />
+            <Toast
+                open={!!toastMessage}
+                onClose={onToastClose}
+                message={toastMessage}
             />
         </Page>
     );

@@ -3,6 +3,7 @@ import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
 import Face from '@mui/icons-material/Face';
+import History from '@mui/icons-material/History';
 import Key from '@mui/icons-material/Key';
 import LinkOff from '@mui/icons-material/LinkOff';
 import LockOpen from '@mui/icons-material/LockOpen';
@@ -28,7 +29,7 @@ import { Link } from 'react-router-dom';
 import LockedChip from 'components/family/LockedChip';
 import UserAvatar from 'components/UserAvatar';
 import globalize from 'lib/globalize';
-import type { FamilyMemberDto } from 'types/family';
+import { type FamilyMemberDto, isChildProfile } from 'types/family';
 import { getLocaleWithSuffix } from 'utils/dateFnsLocale';
 import { isMemberLockedOut } from 'utils/lockout';
 
@@ -36,6 +37,7 @@ interface MemberActions {
     onEdit: (member: FamilyMemberDto) => void
     onSetPin: (member: FamilyMemberDto) => void
     onAvatar: (member: FamilyMemberDto) => void
+    onHistory: (member: FamilyMemberDto) => void
     onUnlock: (member: FamilyMemberDto) => void
     onToggleFamilyAdmin: (member: FamilyMemberDto) => void
     onUnlink: (member: FamilyMemberDto) => void
@@ -65,6 +67,7 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
     onEdit,
     onSetPin,
     onAvatar,
+    onHistory,
     onUnlock,
     onToggleFamilyAdmin,
     onUnlink,
@@ -72,6 +75,7 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
 }) => {
     const [ anchorEl, setAnchorEl ] = useState<HTMLElement | null>(null);
     const isFamilyAdmin = !!member.Policy?.IsFamilyAdministrator;
+    const isChild = isChildProfile(member);
     const hasPin = member.HasPin;
     const isLocked = isMemberLockedOut(member, now);
     const lastSeen = getLastSeen(member.LastActivityDate);
@@ -99,6 +103,11 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
         setAnchorEl(null);
         onAvatar(member);
     }, [ member, onAvatar ]);
+
+    const onHistoryClick = useCallback(() => {
+        setAnchorEl(null);
+        onHistory(member);
+    }, [ member, onHistory ]);
 
     const onUnlockClick = useCallback(() => {
         setAnchorEl(null);
@@ -142,6 +151,9 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                         {isFamilyAdmin && (
                             <Chip size='small' color='primary' variant='outlined' label={globalize.translate('FamilyAdministrator')} />
                         )}
+                        {isChild && (
+                            <Chip size='small' color='secondary' variant='outlined' label={globalize.translate('ChildProfileBadge')} />
+                        )}
                         {member.Policy?.IsDisabled && (
                             <Chip size='small' label={globalize.translate('Disabled')} />
                         )}
@@ -172,13 +184,17 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                     <ListItemIcon><Face fontSize='small' /></ListItemIcon>
                     <ListItemText>{globalize.translate('ProfileAvatar')}</ListItemText>
                 </MenuItem>
+                <MenuItem onClick={onHistoryClick}>
+                    <ListItemIcon><History fontSize='small' /></ListItemIcon>
+                    <ListItemText>{globalize.translate('WatchHistory')}</ListItemText>
+                </MenuItem>
                 {isLocked && (
                     <MenuItem onClick={onUnlockClick}>
                         <ListItemIcon><LockOpen fontSize='small' color='warning' /></ListItemIcon>
                         <ListItemText>{globalize.translate('UnlockProfile')}</ListItemText>
                     </MenuItem>
                 )}
-                <MenuItem onClick={onToggleAdminClick}>
+                <MenuItem onClick={onToggleAdminClick} disabled={isChild}>
                     <ListItemIcon>
                         {isFamilyAdmin ? <CheckBox fontSize='small' color='primary' /> : <CheckBoxOutlineBlank fontSize='small' />}
                     </ListItemIcon>

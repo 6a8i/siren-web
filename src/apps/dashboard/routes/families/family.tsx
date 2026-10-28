@@ -24,6 +24,7 @@ import { useParentalRatings } from 'apps/dashboard/features/users/api/useParenta
 import confirm from 'components/confirm/confirm';
 import { getApiErrorMessage } from 'components/family/apiError';
 import AvatarPresetDialog from 'components/family/AvatarPresetDialog';
+import FamilyHistoryDialog from 'components/family/FamilyHistoryDialog';
 import FamilyMemberDialog, { type FamilyMemberFormValues } from 'components/family/FamilyMemberDialog';
 import FamilyNameDialog, { type FamilyNameFormValues } from 'components/family/FamilyNameDialog';
 import FamilyPinDialog from 'components/family/FamilyPinDialog';
@@ -48,8 +49,7 @@ import {
 import { useApi } from 'hooks/useApi';
 import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
-import { type FamilyMemberDto, getFamilyId, toUpdateFamilyMemberRequest } from 'types/family';
-import { type AvatarPreset, renderAvatarUpload } from 'utils/avatarPreset';
+import { type FamilyMemberDto, getFamilyId, type ImageUpload, toUpdateFamilyMemberRequest } from 'types/family';
 import { getUserImageUrl } from 'utils/userImage';
 
 type DialogName = 'add' | 'link' | 'rename' | 'delete';
@@ -88,6 +88,7 @@ export const Component = () => {
     const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
     const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
     const [ avatarTarget, setAvatarTarget ] = useState<FamilyMemberDto>();
+    const [ historyTarget, setHistoryTarget ] = useState<FamilyMemberDto>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
     const [ toastMessage, setToastMessage ] = useState<string>();
 
@@ -114,6 +115,7 @@ export const Component = () => {
         setEditTarget(undefined);
         setPinTarget(undefined);
         setAvatarTarget(undefined);
+        setHistoryTarget(undefined);
         setErrorMessage(undefined);
     }, []);
 
@@ -168,6 +170,7 @@ export const Component = () => {
                 Name: values.Name,
                 Password: values.Password || undefined,
                 IsFamilyAdministrator: values.IsFamilyAdministrator,
+                IsChildProfile: values.IsChildProfile,
                 MaxParentalRating: values.MaxParentalRating,
                 EnableAllFolders: values.EnableAllFolders,
                 EnabledFolders: values.EnabledFolders
@@ -184,6 +187,7 @@ export const Component = () => {
                 ...toUpdateFamilyMemberRequest(editTarget),
                 Name: values.Name,
                 IsFamilyAdministrator: values.IsFamilyAdministrator,
+                IsChildProfile: values.IsChildProfile,
                 IsDisabled: values.IsDisabled,
                 MaxParentalRating: values.MaxParentalRating,
                 EnableAllFolders: values.EnableAllFolders,
@@ -230,6 +234,11 @@ export const Component = () => {
         setAvatarTarget(member);
     }, []);
 
+    const onHistory = useCallback((member: FamilyMemberDto) => {
+        setErrorMessage(undefined);
+        setHistoryTarget(member);
+    }, []);
+
     /** From the edit dialog: the picker opens on top of it, and the edit form keeps its changes. */
     const onEditAvatarClick = useCallback(() => {
         if (editTarget) onAvatar(editTarget);
@@ -244,13 +253,10 @@ export const Component = () => {
         }), globalize.translate('SettingsSaved'));
     }, [ familyId, pinTarget, run, setPassword ]);
 
-    const onAvatarSave = useCallback((preset: AvatarPreset) => {
+    const onAvatarSave = useCallback((image: ImageUpload) => {
         if (!familyId || !avatarTarget?.Id) return;
         const userId = avatarTarget.Id;
-        run(async () => {
-            const image = renderAvatarUpload(preset);
-            await setImage.mutateAsync({ familyId, userId, image });
-        }, globalize.translate('AvatarSaved'), closeAvatarDialog);
+        run(() => setImage.mutateAsync({ familyId, userId, image }), globalize.translate('AvatarSaved'), closeAvatarDialog);
     }, [ avatarTarget, closeAvatarDialog, familyId, run, setImage ]);
 
     const onAvatarRemove = useCallback(() => {
@@ -355,7 +361,7 @@ export const Component = () => {
                             <Alert severity='info'>{globalize.translate('FamilyFull', family.MaxMembers)}</Alert>
                         )}
 
-                        {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && (
+                        {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && !historyTarget && (
                             <Alert severity='error' onClose={closeDialogs}>{errorMessage}</Alert>
                         )}
 
@@ -365,6 +371,7 @@ export const Component = () => {
                             onEdit={onEdit}
                             onSetPin={onSetPin}
                             onAvatar={onAvatar}
+                            onHistory={onHistory}
                             onUnlock={onUnlock}
                             onToggleFamilyAdmin={onToggleFamilyAdmin}
                             onUnlink={onUnlink}
@@ -459,6 +466,13 @@ export const Component = () => {
                 onClose={closeAvatarDialog}
                 onSave={onAvatarSave}
                 onRemove={onAvatarRemove}
+            />
+            <FamilyHistoryDialog
+                open={!!historyTarget}
+                familyId={familyId}
+                userId={historyTarget?.Id ?? undefined}
+                memberName={historyTarget?.Name}
+                onClose={closeDialogs}
             />
             <Toast
                 open={!!toastMessage}
