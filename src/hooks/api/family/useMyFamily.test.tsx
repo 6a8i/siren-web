@@ -22,7 +22,9 @@ const FAMILY: FamilyDto = {
     Name: 'The Smiths',
     DateCreated: '2026-01-01T00:00:00Z',
     MemberCount: 2,
-    MaxMembers: 6
+    MaxMembers: 6,
+    EnableAllFolders: true,
+    EnabledFolders: []
 };
 
 /** A fake SDK Api: the family calls only use its base path, authorization header and axios instance. */
@@ -80,7 +82,7 @@ describe('useMyFamily()', () => {
         expect(queryClient.getQueryData([ FAMILIES_QUERY_KEY, 'Mine', USER.Id ])).toEqual(FAMILY);
     });
 
-    it('resolves to null when the user has no family (404)', async () => {
+    it('resolves to undefined when the user has no family (404)', async () => {
         const { api, get } = createApi();
         get.mockRejectedValue(httpError(404));
 
@@ -88,7 +90,7 @@ describe('useMyFamily()', () => {
 
         await waitFor(() => result.current.isSuccess);
 
-        expect(result.current.data).toBeNull();
+        expect(result.current.data).toBeUndefined();
         expect(result.current.isError).toBe(false);
         expect(result.current.error).toBeNull();
     });

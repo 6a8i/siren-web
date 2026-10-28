@@ -34,6 +34,7 @@ function createApiClient(options: { onAuthenticated?: boolean } = {}) {
     return {
         ajax: vi.fn(),
         getUrl: vi.fn((path: string) => `${SERVER}/${path}`),
+        serverId: vi.fn(() => 'server-1'),
         setAuthenticationInfo: vi.fn(),
         ...(options.onAuthenticated === false ? {} : { onAuthenticated: vi.fn().mockResolvedValue(undefined) })
     };
@@ -58,6 +59,14 @@ describe('ProfileSwitchError', () => {
         expect(new ProfileSwitchError(403).isWrongPin).toBe(false);
         expect(new ProfileSwitchError(500).isWrongPin).toBe(false);
         expect(new ProfileSwitchError().isWrongPin).toBe(false);
+    });
+
+    it('is refused only for a 403', () => {
+        expect(new ProfileSwitchError(403).isRefused).toBe(true);
+
+        expect(new ProfileSwitchError(401).isRefused).toBe(false);
+        expect(new ProfileSwitchError(500).isRefused).toBe(false);
+        expect(new ProfileSwitchError().isRefused).toBe(false);
     });
 });
 
