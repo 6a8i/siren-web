@@ -27,7 +27,11 @@ import Events from './utils/events';
 import { updateApiClientSdk } from 'utils/jellyfin-apiclient/compat';
 import { initializeServerConnections } from './scripts/serverNotifications';
 
+import { installStaleChunkReload } from 'utils/staleChunk';
 import RootApp from './RootApp';
+
+// A page left open across a rebuild reloads itself instead of failing on a missing chunk.
+installStaleChunkReload();
 
 // Import the button webcomponent for use throughout the site
 // NOTE: This is a bit of a hack, files should ensure the component is imported before use
