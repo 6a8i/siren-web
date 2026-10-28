@@ -1,4 +1,3 @@
-import type { AuthenticationInfo } from '@jellyfin/sdk/lib/generated-client/models/authentication-info';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
@@ -6,17 +5,22 @@ import { useTheme } from '@mui/material/styles';
 import Tooltip from '@mui/material/Tooltip';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
+import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 import parseISO from 'date-fns/parseISO';
 import { type MRT_ColumnDef, type MRT_Theme, useMaterialReactTable } from 'material-react-table';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import DateTimeCell from 'apps/dashboard/components/table/DateTimeCell';
 import TablePage, { DEFAULT_TABLE_OPTIONS } from 'apps/dashboard/components/table/TablePage';
+import type { SirenAuthenticationInfo } from 'apps/dashboard/features/keys/api/keys-api';
 import { useApiKeys } from 'apps/dashboard/features/keys/api/useApiKeys';
 import { useRevokeKey } from 'apps/dashboard/features/keys/api/useRevokeKey';
 import { useCreateKey } from 'apps/dashboard/features/keys/api/useCreateKey';
+import { useSetKeyReadOnly } from 'apps/dashboard/features/keys/api/useSetKeyReadOnly';
+import CreateApiKeyDialog, { type CreateApiKeyValues } from 'apps/dashboard/features/keys/components/CreateApiKeyDialog';
+import ReadOnlyCell from 'apps/dashboard/features/keys/components/ReadOnlyCell';
 import globalize from 'lib/globalize';
-import InputDialog from 'components/InputDialog';
 import ConfirmDialog from 'components/ConfirmDialog';
 
 export const Component = () => {
@@ -24,14 +28,15 @@ export const Component = () => {
     const [ isConfirmDeleteOpen, setIsConfirmDeleteOpen ] = useState(false);
     const [ apiKeyToDelete, setApiKeyToDelete ] = useState('');
     const { data, isLoading, isError } = useApiKeys();
-    const keys = useMemo(() => (
+    const keys = useMemo<SirenAuthenticationInfo[]>(() => (
         data?.Items || []
     ), [ data ]);
     const revokeKey = useRevokeKey();
     const createKey = useCreateKey();
+    const setKeyReadOnly = useSetKeyReadOnly();
     const theme = useTheme();
 
-    const columns = useMemo<MRT_ColumnDef<AuthenticationInfo>[]>(() => [
+    const columns = useMemo<MRT_ColumnDef<SirenAuthenticationInfo>[]>(() => [
         {
             id: 'ApiKey',
             accessorKey: 'AccessToken',
@@ -49,6 +54,14 @@ export const Component = () => {
             Cell: DateTimeCell,
             header: globalize.translate('HeaderDateIssued'),
             filterVariant: 'datetime-range'
+        },
+        {
+            id: 'ReadOnly',
+            accessorFn: item => !!item.IsReadOnly,
+            header: globalize.translate('LabelReadOnly'),
+            size: 140,
+            filterVariant: 'checkbox',
+            Cell: ReadOnlyCell
         }
     ], []);
 
@@ -69,13 +82,13 @@ export const Component = () => {
             isLoading
         },
 
-        // Enable (delete) row actions
+        // Enable (read-only toggle, delete) row actions
         enableRowActions: true,
         positionActionsColumn: 'last',
         displayColumnDefOptions: {
             'mrt-row-actions': {
                 header: '',
-                size: 25
+                size: 80
             }
         },
 
@@ -89,11 +102,24 @@ export const Component = () => {
         ),
 
         renderRowActions: ({ row }) => {
+            const isReadOnly = !!row.original.IsReadOnly;
+            const toggleLabel = globalize.translate(isReadOnly ? 'ApiKeyAllowWrites' : 'ApiKeyMakeReadOnly');
             return (
                 <Box sx={{ display: 'flex' }}>
+                    <Tooltip title={toggleLabel}>
+                        <IconButton
+                            aria-label={toggleLabel}
+                            disabled={setKeyReadOnly.isPending}
+                            // eslint-disable-next-line react/jsx-no-bind
+                            onClick={() => row.original.AccessToken && onToggleReadOnly(row.original.AccessToken, !isReadOnly)}
+                        >
+                            {isReadOnly ? <LockOpenIcon /> : <LockIcon />}
+                        </IconButton>
+                    </Tooltip>
                     <Tooltip title={globalize.translate('ButtonRevoke')}>
                         <IconButton
                             color='error'
+                            aria-label={globalize.translate('ButtonRevoke')}
                             // eslint-disable-next-line react/jsx-no-bind
                             onClick={() => row.original?.AccessToken && onRevokeKey(row.original.AccessToken)}
                         >
@@ -104,6 +130,10 @@ export const Component = () => {
             );
         }
     });
+
+    const onToggleReadOnly = useCallback((key: string, isReadOnly: boolean) => {
+        setKeyReadOnly.mutate({ key, isReadOnly });
+    }, [ setKeyReadOnly ]);
 
     const onRevokeKey = useCallback((accessToken: string) => {
         setApiKeyToDelete(accessToken);
@@ -134,9 +164,10 @@ export const Component = () => {
         setIsConfirmDeleteOpen(false);
     }, []);
 
-    const onConfirmCreate = useCallback((name: string) => {
+    const onConfirmCreate = useCallback(({ app, isReadOnly }: CreateApiKeyValues) => {
         createKey.mutate({
-            app: name
+            app,
+            isReadOnly
         }, {
             onSettled: () => {
                 setIsCreateApiKeyPromptOpen(false);
@@ -155,12 +186,9 @@ export const Component = () => {
                 onConfirm={onConfirmDelete}
                 onCancel={onConfirmDeleteCancel}
             />
-            <InputDialog
+            <CreateApiKeyDialog
                 open={isCreateApiKeyPromptOpen}
-                title={globalize.translate('HeaderNewApiKey')}
-                label={globalize.translate('LabelAppName')}
-                helperText={globalize.translate('LabelAppNameExample')}
-                confirmButtonText={globalize.translate('Create')}
+                isSaving={createKey.isPending}
                 onConfirm={onConfirmCreate}
                 onClose={onCreateApiKeyPromptClose}
             />
