@@ -1,5 +1,6 @@
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AppSettingsAlt from '@mui/icons-material/AppSettingsAlt';
+import Check from '@mui/icons-material/Check';
 import Close from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import Download from '@mui/icons-material/Download';
@@ -11,12 +12,14 @@ import Storage from '@mui/icons-material/Storage';
 import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
+import ListSubheader from '@mui/material/ListSubheader';
 import Menu, { MenuProps } from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import React, { FC, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 
 import { appHost } from 'components/apphost';
+import { THEME_CHOICES, useThemeChoice } from 'components/theme/ThemeQuickSwitch';
 import { AppFeature } from 'constants/appFeature';
 import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
@@ -37,6 +40,15 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
 }) => {
     const { user } = useApi();
     const { data: isQuickConnectEnabled } = useQuickConnectEnabled();
+    const { current: currentThemeChoice, apply: applyThemeChoice } = useThemeChoice();
+
+    const onThemeChoiceClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
+        const id = e.currentTarget.dataset.theme;
+        if (id) {
+            applyThemeChoice(id);
+        }
+        onMenuClose();
+    }, [ applyThemeChoice, onMenuClose ]);
 
     const onDownloadManagerClick = useCallback(() => {
         shell.openDownloadManager();
@@ -103,6 +115,27 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     {globalize.translate('Settings')}
                 </ListItemText>
             </MenuItem>
+
+            <Divider />
+            <ListSubheader disableSticky sx={{ bgcolor: 'transparent', lineHeight: '2.4em' }}>
+                {globalize.translate('LabelTheme')}
+            </ListSubheader>
+            {THEME_CHOICES.map(({ id, label, Icon }) => (
+                <MenuItem
+                    key={id}
+                    data-theme={id}
+                    selected={currentThemeChoice === id}
+                    onClick={onThemeChoiceClick}
+                >
+                    <ListItemIcon>
+                        <Icon />
+                    </ListItemIcon>
+                    <ListItemText>
+                        {globalize.translate(label)}
+                    </ListItemText>
+                    {currentThemeChoice === id && <Check fontSize='small' />}
+                </MenuItem>
+            ))}
 
             {(appHost.supports(AppFeature.DownloadManagement) || appHost.supports(AppFeature.ClientSettings)) && (
                 <Divider />

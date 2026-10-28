@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import toast from 'components/toast/toast';
+import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
 
 import type { DisplaySettingsValues } from '../types/displaySettingsValues';
@@ -14,11 +15,13 @@ type UpdateField = {
 
 export function useDisplaySettingForm() {
     const [urlParams] = useSearchParams();
+    const { user } = useApi();
     const {
         displaySettings,
         loading,
         saveDisplaySettings
-    } = useDisplaySettings({ userId: urlParams.get('userId') });
+    // Without a userId in the URL the page is for the signed-in user; it used to wait forever.
+    } = useDisplaySettings({ userId: urlParams.get('userId') || user?.Id });
     const [formValues, setFormValues] = useState<DisplaySettingsValues>();
 
     useEffect(() => {

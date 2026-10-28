@@ -7,6 +7,7 @@ import layoutManager from 'components/layoutManager';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
 import { AppFeature } from 'constants/appFeature';
+import ThemeQuickSwitch from 'components/theme/ThemeQuickSwitch';
 import LinkButton from 'elements/emby-button/LinkButton';
 import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
@@ -64,6 +65,15 @@ const UserSettingsPage: FC = () => {
                         margin: '0 auto'
                     }}
                 >
+                    {isLoggedInUser && (
+                        <div className='verticalSection verticalSection-extrabottompadding'>
+                            <h2 className='sectionTitle' style={{ paddingLeft: '0.25em' }}>
+                                {globalize.translate('LabelTheme')}
+                            </h2>
+                            <ThemeQuickSwitch />
+                        </div>
+                    )}
+
                     <div className='verticalSection verticalSection-extrabottompadding'>
                         <h2
                             className='sectionTitle headerUsername'

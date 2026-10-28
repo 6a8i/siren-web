@@ -1,4 +1,5 @@
 import Events from 'utils/events';
+import { resolveThemeId } from 'utils/theme';
 import { EventType } from 'constants/eventType';
 
 import { getDefaultTheme, getThemes as getConfiguredThemes } from './settings/webSettings';
@@ -28,6 +29,9 @@ function getThemeStylesheetInfo(id) {
 }
 
 function setTheme(id) {
+    // The automatic choice follows the system preference.
+    id = resolveThemeId(id);
+
     return new Promise(function (resolve) {
         if (currentThemeId && currentThemeId === id) {
             resolve();

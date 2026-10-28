@@ -15,6 +15,7 @@ import { AppFeature } from 'constants/appFeature';
 import { LayoutMode } from 'constants/layoutMode';
 import { useApi } from 'hooks/useApi';
 import { useThemes } from 'hooks/useThemes';
+import { AUTO_THEME_ID } from 'utils/theme';
 import globalize from 'lib/globalize';
 
 import { useScreensavers } from '../hooks/useScreensavers';
@@ -69,6 +70,7 @@ export function DisplayPreferences({ onChange, values }: Readonly<DisplayPrefere
                         onChange={onChange}
                         value={values.theme}
                     >
+                        <MenuItem value={AUTO_THEME_ID}>{globalize.translate('ThemeFollowSystem')}</MenuItem>
                         { ...themes.map(({ id, name }) => (
                             <MenuItem key={id} value={id}>{name}</MenuItem>
                         ))}
@@ -118,6 +120,7 @@ export function DisplayPreferences({ onChange, values }: Readonly<DisplayPrefere
                         onChange={ onChange }
                         value={ values.dashboardTheme }
                     >
+                        <MenuItem value={AUTO_THEME_ID}>{globalize.translate('ThemeFollowSystem')}</MenuItem>
                         { ...themes.map(({ id, name }) => (
                             <MenuItem key={ id } value={ id }>{ name }</MenuItem>
                         )) }
