@@ -1,4 +1,5 @@
 import loading from 'components/loading/loading';
+import { initWizardPage } from '../wizardShell';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Dashboard from 'utils/dashboard';
 import dom from 'utils/dom';
@@ -43,6 +44,7 @@ function onSubmit(e) {
 }
 
 export default function (view) {
+    initWizardPage(view, 1);
     view.querySelector('.wizardStartForm').addEventListener('submit', onSubmit);
 
     view.addEventListener('viewshow', function () {

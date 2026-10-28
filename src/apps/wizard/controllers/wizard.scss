@@ -1,0 +1,281 @@
+// Siren setup wizard layout: a brand panel with the step list beside a single card per step.
+// Colours come from the active theme; the --siren-* tokens have fallbacks for the other themes.
+
+.wizardPage {
+    padding: 0 !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+}
+
+.wizardDocument .skinHeader {
+    display: none !important;
+}
+
+.wizardShell {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: minmax(18em, 24em) 1fr;
+}
+
+.wizardBrand {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 3em 2.5em;
+    background:
+        linear-gradient(
+            165deg,
+            rgba(var(--jf-palette-primary-mainChannel) / 0.18) 0%,
+            rgba(var(--jf-palette-secondary-mainChannel) / 0.07) 55%,
+            transparent 100%
+        );
+    border-right: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.08));
+
+    [dir="rtl"] & {
+        border-right: 0;
+        border-left: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.08));
+    }
+}
+
+.wizardBrandLogo {
+    display: block;
+    width: 11.5em;
+    max-width: 100%;
+    height: 3.3em;
+    background: url(../../../assets/img/siren/banner-light.svg) no-repeat left center / contain;
+
+    [dir="rtl"] & {
+        background-position: right center;
+    }
+}
+
+.wizardBrandTagline {
+    margin: 1.1em 0 0;
+    font-size: 1.05em;
+    line-height: 1.45;
+    color: var(--jf-palette-text-secondary);
+}
+
+.wizardSteps {
+    list-style: none;
+    margin: 2.5em 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9em;
+}
+
+.wizardStep {
+    display: flex;
+    align-items: center;
+    gap: 0.9em;
+    color: var(--jf-palette-text-secondary);
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.wizardStepIndex {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
+    border: 1.5px solid var(--siren-panel-border, rgba(255, 255, 255, 0.16));
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+    > .material-icons {
+        font-size: 1.15em;
+    }
+}
+
+.wizardStep-current {
+    color: var(--jf-palette-text-primary);
+
+    .wizardStepIndex {
+        background: var(--jf-palette-primary-main);
+        border-color: transparent;
+        color: var(--jf-palette-primary-contrastText);
+        box-shadow: 0 0 0 4px rgba(var(--jf-palette-primary-mainChannel) / 0.22);
+    }
+}
+
+.wizardStep-done .wizardStepIndex {
+    background: rgba(var(--jf-palette-primary-mainChannel) / 0.16);
+    border-color: transparent;
+    color: var(--jf-palette-primary-main);
+}
+
+.wizardStepCounter {
+    display: none;
+    margin-top: auto;
+    padding-top: 2em;
+    font-size: 0.85em;
+    color: var(--jf-palette-text-secondary);
+}
+
+.wizardMain {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3em 2em;
+}
+
+.wizardCard {
+    width: 100%;
+    max-width: 40em;
+    box-sizing: border-box;
+    padding: 2.4em 2.6em;
+    background: var(--siren-panel-bg, var(--jf-palette-background-paper));
+    border: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.08));
+    border-radius: var(--siren-radius-lg, 1em);
+    box-shadow: var(--siren-shadow-2, 0 20px 50px rgba(0, 0, 0, 0.35));
+
+    h1 {
+        margin: 0 0 0.4em;
+        font-size: 1.7em;
+        line-height: 1.2;
+    }
+
+    form {
+        max-width: 100%;
+    }
+}
+
+.mediaLibraryPage .wizardCard {
+    max-width: 58em;
+}
+
+.wizardHeaderRow {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5em 1.5em;
+}
+
+.wizardHelpLink {
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.wizardIntro {
+    margin: 0 0 1.8em;
+    line-height: 1.55;
+    color: var(--jf-palette-text-secondary);
+}
+
+.wizardCard .wizardStartForm {
+    background: none !important;
+}
+
+.wizardNavigation {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    margin-top: 2em;
+    padding-top: 1.5em;
+    border-top: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.08));
+    text-align: initial;
+
+    .emby-button {
+        margin: 0;
+    }
+
+    .button-cancel {
+        margin-right: auto;
+
+        [dir="rtl"] & {
+            margin-right: 0;
+            margin-left: auto;
+        }
+    }
+}
+
+@media (max-width: 64em) {
+    .wizardShell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+
+    .wizardBrand {
+        padding: 1.5em 1.25em 1.1em;
+        border-right: 0;
+        border-bottom: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.08));
+
+        [dir="rtl"] & {
+            border-left: 0;
+        }
+    }
+
+    .wizardBrandLogo {
+        width: 8em;
+        height: 2.3em;
+    }
+
+    .wizardBrandTagline {
+        display: none;
+    }
+
+    .wizardSteps {
+        flex-direction: row;
+        gap: 0.5em;
+        margin-top: 1.1em;
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding-bottom: 0.15em;
+
+        &::-webkit-scrollbar {
+            display: none;
+        }
+    }
+
+    .wizardStep {
+        flex-shrink: 0;
+        gap: 0.5em;
+        padding: 0.3em 0.75em 0.3em 0.35em;
+        border-radius: 999px;
+        border: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.1));
+        font-size: 0.86em;
+    }
+
+    .wizardStep-current {
+        border-color: rgba(var(--jf-palette-primary-mainChannel) / 0.6);
+        background: rgba(var(--jf-palette-primary-mainChannel) / 0.1);
+    }
+
+    .wizardStepIndex {
+        width: 1.75em;
+        height: 1.75em;
+    }
+
+    .wizardMain {
+        align-items: flex-start;
+        padding: 1.25em 1em 2.5em;
+    }
+
+    .wizardCard {
+        padding: 1.6em 1.3em;
+    }
+}
+
+@media (max-width: 36em) {
+    .wizardStep:not(.wizardStep-current) .wizardStepLabel {
+        display: none;
+    }
+
+    .wizardStep:not(.wizardStep-current) {
+        padding-right: 0.35em;
+    }
+
+    .wizardNavigation .emby-button {
+        flex-grow: 1;
+        justify-content: center;
+    }
+}

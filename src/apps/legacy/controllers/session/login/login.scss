@@ -1,6 +1,83 @@
+// Siren sign-in: brand mark above a single glass card, centred over the splash backdrop.
+
+#loginPage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
+.loginShell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6em;
+    width: 100%;
+    max-width: 32em;
+    padding: 2.5em 1em calc(2.5em + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+.loginBrandLogo {
+    width: 12em;
+    height: 3.4em;
+    background: url(../../../../../assets/img/siren/banner-light.svg) no-repeat center / contain;
+    filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+}
+
+.loginCard {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.9em 1.7em 1.4em;
+    background: var(--siren-glass-bg, rgba(16, 22, 34, 0.78));
+    border: 1px solid var(--siren-panel-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--siren-radius-lg, 1em);
+    box-shadow: var(--siren-shadow-2, 0 24px 60px rgba(0, 0, 0, 0.45));
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .loginCard {
+        backdrop-filter: blur(20px) saturate(150%);
+    }
+}
+
+.loginTitle {
+    margin: 0 0 1.1em;
+    text-align: center;
+    font-size: 1.45em;
+}
+
+.loginCard .manualLoginForm {
+    max-width: 100%;
+}
+
+.loginCard .emby-button.block {
+    margin: 0.45em 0;
+}
+
+.loginCard .checkboxContainer {
+    margin-bottom: 1.2em;
+}
+
+.visualLoginForm {
+    text-align: center;
+}
+
+.loginActions {
+    margin: 0.8em auto 0;
+    max-width: 100%;
+}
+
+.loginActions .button-flat {
+    color: var(--jf-palette-text-secondary);
+}
+
 .loginDisclaimerContainer {
     display: flex;
-    margin-top: 2em;
+    margin-top: 1.5em;
 }
 
 .loginDisclaimer {
@@ -22,5 +99,20 @@
         margin-left: auto;
         margin-right: auto;
         width: fit-content;
+    }
+}
+
+@media (max-width: 36em) {
+    .loginShell {
+        padding-top: 1.6em;
+        gap: 1.2em;
+    }
+
+    .loginBrandLogo {
+        width: 9.5em;
+    }
+
+    .loginCard {
+        padding: 1.5em 1.2em 1.1em;
     }
 }

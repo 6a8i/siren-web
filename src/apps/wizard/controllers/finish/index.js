@@ -1,4 +1,5 @@
 import loading from 'components/loading/loading';
+import { initWizardPage } from '../wizardShell';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 
 function onFinish() {
@@ -14,5 +15,6 @@ function onFinish() {
 }
 
 export default function (view) {
+    initWizardPage(view, 6);
     view.querySelector('.btnWizardNext').addEventListener('click', onFinish);
 }

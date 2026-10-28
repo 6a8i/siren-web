@@ -1,4 +1,5 @@
 import loading from 'components/loading/loading';
+import { initWizardPage } from '../wizardShell';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
 import Dashboard from 'utils/dashboard';
 
@@ -78,6 +79,7 @@ function onSubmit(e) {
 }
 
 export default function (view) {
+    initWizardPage(view, 4);
     view.querySelector('.wizardSettingsForm').addEventListener('submit', onSubmit);
     view.addEventListener('viewshow', function () {
         document.querySelector('.skinHeader').classList.add('noHomeButtonHeader');

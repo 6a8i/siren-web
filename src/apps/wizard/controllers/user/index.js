@@ -1,4 +1,5 @@
 import loading from 'components/loading/loading';
+import { initWizardPage } from '../wizardShell';
 import toast from 'components/toast/toast';
 import globalize from 'lib/globalize';
 import { ServerConnections } from 'lib/jellyfin-apiclient';
@@ -70,6 +71,7 @@ function onViewShow() {
 }
 
 export default function (view) {
+    initWizardPage(view, 2);
     view.querySelector('.wizardUserForm').addEventListener('submit', onSubmit);
     view.addEventListener('viewshow', function () {
         document.querySelector('.skinHeader').classList.add('noHomeButtonHeader');

@@ -1,5 +1,7 @@
 import escapeHtml from 'escape-html';
 
+import { initWizardPage } from './wizardShell';
+
 import { getDefaultBackgroundClass } from 'components/cardbuilder/utils/builder';
 import confirm from 'components/confirm/confirm';
 import loading from 'components/loading/loading';
@@ -374,6 +376,7 @@ window.WizardLibraryPage = {
     }
 };
 pageClassOn('pageshow', 'mediaLibraryPage', function () {
+    initWizardPage(this, 3);
     reloadLibrary(this);
 });
 pageIdOn('pageshow', 'mediaLibraryPage', function () {
