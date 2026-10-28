@@ -1,0 +1,304 @@
+import type { ParentalRating } from '@jellyfin/sdk/lib/generated-client';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Checkbox from '@mui/material/Checkbox';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import FormControl from '@mui/material/FormControl';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormGroup from '@mui/material/FormGroup';
+import FormHelperText from '@mui/material/FormHelperText';
+import InputLabel from '@mui/material/InputLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { type SelectChangeEvent } from '@mui/material/Select';
+import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import React, { type FC, useCallback, useEffect, useMemo, useState } from 'react';
+
+import globalize from 'lib/globalize';
+import type { SirenUserDto } from 'types/family';
+
+import { useFocusOnOpen } from './useFocusOnOpen';
+
+export interface LibraryOption {
+    Id?: string | null
+    Name?: string | null
+}
+
+export interface FamilyMemberFormValues {
+    Name: string
+    /** Only read when creating a profile; an existing profile's PIN has its own dialog. */
+    Password: string
+    IsFamilyAdministrator: boolean
+    IsDisabled: boolean
+    MaxParentalRating: number | null
+    EnableAllFolders: boolean
+    EnabledFolders: string[]
+}
+
+interface FamilyMemberDialogProps {
+    open: boolean
+    title: string
+    /** The profile being edited; none when creating. */
+    member?: SirenUserDto
+    /** Libraries the editor may grant: all of them for a server admin, their own for a family admin. */
+    libraries: LibraryOption[]
+    parentalRatings: ParentalRating[]
+    /** Editing your own profile: you cannot disable or demote yourself. */
+    isSelf?: boolean
+    isSaving?: boolean
+    errorMessage?: string
+    onClose: () => void
+    onSubmit: (values: FamilyMemberFormValues) => void
+}
+
+const NO_LIMIT = '';
+
+const toValues = (member?: SirenUserDto): FamilyMemberFormValues => ({
+    Name: member?.Name ?? '',
+    Password: '',
+    IsFamilyAdministrator: !!member?.Policy?.IsFamilyAdministrator,
+    IsDisabled: !!member?.Policy?.IsDisabled,
+    MaxParentalRating: member?.Policy?.MaxParentalRating ?? null,
+    EnableAllFolders: member ? (member.Policy?.EnableAllFolders ?? true) : true,
+    EnabledFolders: member?.Policy?.EnabledFolders ?? []
+});
+
+interface RatingOption {
+    score: number
+    label: string
+}
+
+/** One option per score; ratings that share a score (TV-14, 14) are listed together. */
+const groupRatings = (ratings: ParentalRating[]): RatingOption[] => {
+    const options: RatingOption[] = [];
+    for (const rating of ratings) {
+        const score = rating.RatingScore?.score;
+        if (score == null) continue;
+
+        const existing = options.find(option => option.score === score);
+        if (!existing) {
+            options.push({ score, label: rating.Name ?? String(score) });
+        } else if (rating.Name && !existing.label.split('/').includes(rating.Name)) {
+            existing.label += `/${rating.Name}`;
+        }
+    }
+
+    return options;
+};
+
+interface LibraryCheckboxProps {
+    id: string
+    name: string
+    checked: boolean
+    onToggle: (id: string, checked: boolean) => void
+}
+
+const LibraryCheckbox: FC<LibraryCheckboxProps> = ({ id, name, checked, onToggle }) => {
+    const onChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, isChecked: boolean) => {
+        onToggle(id, isChecked);
+    }, [ id, onToggle ]);
+
+    return (
+        <FormControlLabel
+            control={<Checkbox checked={checked} onChange={onChange} />}
+            label={name}
+            sx={{ ml: 2 }}
+        />
+    );
+};
+
+/**
+ * Creates or edits one profile of a family: name, PIN (new profiles), parental rating, library
+ * access and the family administrator flag. Shared by the dashboard and the family page.
+ */
+const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
+    open,
+    title,
+    member,
+    libraries,
+    parentalRatings,
+    isSelf = false,
+    isSaving = false,
+    errorMessage,
+    onClose,
+    onSubmit
+}) => {
+    const [ values, setValues ] = useState<FamilyMemberFormValues>(() => toValues(member));
+    const ratingOptions = useMemo(() => groupRatings(parentalRatings), [ parentalRatings ]);
+    const nameRef = useFocusOnOpen<HTMLInputElement>(open);
+    const isEdit = !!member;
+
+    useEffect(() => {
+        if (open) setValues(toValues(member));
+    }, [ open, member ]);
+
+    const onNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const Name = e.target.value;
+        setValues(current => ({ ...current, Name }));
+    }, []);
+
+    const onPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const Password = e.target.value;
+        setValues(current => ({ ...current, Password }));
+    }, []);
+
+    const onRatingChange = useCallback((e: SelectChangeEvent) => {
+        const value = e.target.value;
+        setValues(current => ({ ...current, MaxParentalRating: value === NO_LIMIT ? null : Number(value) }));
+    }, []);
+
+    const onAllFoldersChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, EnableAllFolders: boolean) => {
+        setValues(current => ({ ...current, EnableAllFolders }));
+    }, []);
+
+    const onLibraryToggle = useCallback((id: string, checked: boolean) => {
+        setValues(current => {
+            const others = current.EnabledFolders.filter(folderId => folderId !== id);
+            return { ...current, EnabledFolders: checked ? [ ...others, id ] : others };
+        });
+    }, []);
+
+    const onFamilyAdminChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, IsFamilyAdministrator: boolean) => {
+        setValues(current => ({ ...current, IsFamilyAdministrator }));
+    }, []);
+
+    const onDisabledChange = useCallback((_: React.ChangeEvent<HTMLInputElement>, IsDisabled: boolean) => {
+        setValues(current => ({ ...current, IsDisabled }));
+    }, []);
+
+    const onFormSubmit = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        onSubmit({ ...values, Name: values.Name.trim() });
+    }, [ onSubmit, values ]);
+
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            fullWidth
+            maxWidth='sm'
+            slotProps={{
+                paper: {
+                    component: 'form',
+                    onSubmit: onFormSubmit
+                }
+            }}
+        >
+            <DialogTitle>{title}</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2.5} sx={{ pt: 1 }}>
+                    {errorMessage && (
+                        <Alert severity='error'>{errorMessage}</Alert>
+                    )}
+
+                    <TextField
+                        name='Name'
+                        label={globalize.translate('LabelName')}
+                        value={values.Name}
+                        onChange={onNameChange}
+                        inputRef={nameRef}
+                        required
+                        fullWidth
+                        autoComplete='off'
+                    />
+
+                    {!isEdit && (
+                        <TextField
+                            name='Password'
+                            type='password'
+                            label={globalize.translate('LabelPinOptional')}
+                            value={values.Password}
+                            onChange={onPasswordChange}
+                            helperText={globalize.translate('PinHelp')}
+                            fullWidth
+                            autoComplete='new-password'
+                        />
+                    )}
+
+                    <FormControl fullWidth>
+                        <InputLabel id='family-member-rating-label'>
+                            {globalize.translate('LabelMaxParentalRating')}
+                        </InputLabel>
+                        <Select
+                            labelId='family-member-rating-label'
+                            label={globalize.translate('LabelMaxParentalRating')}
+                            value={values.MaxParentalRating == null ? NO_LIMIT : String(values.MaxParentalRating)}
+                            onChange={onRatingChange}
+                        >
+                            <MenuItem value={NO_LIMIT}>{globalize.translate('NoParentalRatingLimit')}</MenuItem>
+                            {ratingOptions.map(option => (
+                                <MenuItem key={option.score} value={String(option.score)}>
+                                    {option.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <FormControl component='fieldset' variant='standard'>
+                        <Typography variant='subtitle2' component='legend' sx={{ mb: 0.5 }}>
+                            {globalize.translate('HeaderLibraryAccess')}
+                        </Typography>
+                        <FormGroup>
+                            <FormControlLabel
+                                control={<Checkbox checked={values.EnableAllFolders} onChange={onAllFoldersChange} />}
+                                label={globalize.translate('AllLibraries')}
+                            />
+                            {!values.EnableAllFolders && libraries.map(library => (
+                                library.Id ? (
+                                    <LibraryCheckbox
+                                        key={library.Id}
+                                        id={library.Id}
+                                        name={library.Name ?? ''}
+                                        checked={values.EnabledFolders.includes(library.Id)}
+                                        onToggle={onLibraryToggle}
+                                    />
+                                ) : null
+                            ))}
+                        </FormGroup>
+                    </FormControl>
+
+                    <FormControl>
+                        <FormControlLabel
+                            control={(
+                                <Checkbox
+                                    checked={values.IsFamilyAdministrator}
+                                    onChange={onFamilyAdminChange}
+                                    disabled={isSelf}
+                                />
+                            )}
+                            label={globalize.translate('FamilyAdministrator')}
+                        />
+                        <FormHelperText>{globalize.translate('FamilyAdministratorHelp')}</FormHelperText>
+                    </FormControl>
+
+                    {isEdit && (
+                        <FormControlLabel
+                            control={(
+                                <Checkbox
+                                    checked={values.IsDisabled}
+                                    onChange={onDisabledChange}
+                                    disabled={isSelf}
+                                />
+                            )}
+                            label={globalize.translate('OptionDisableProfile')}
+                        />
+                    )}
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} color='inherit'>
+                    {globalize.translate('ButtonCancel')}
+                </Button>
+                <Button type='submit' variant='contained' disabled={isSaving || !values.Name.trim()}>
+                    {globalize.translate('Save')}
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
+
+export default FamilyMemberDialog;

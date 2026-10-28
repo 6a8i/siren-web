@@ -9,6 +9,8 @@ import { getDefaultBackgroundClass } from '../../cardbuilder/utils/builder';
 
 type IProps = {
     user?: UserDto;
+    /** The name of the family the user belongs to, when any. */
+    familyName?: string;
 };
 
 const getLastSeenText = (lastActivityDate?: string | null) => {
@@ -19,7 +21,7 @@ const getLastSeenText = (lastActivityDate?: string | null) => {
     return '';
 };
 
-const UserCardBox: FunctionComponent<IProps> = ({ user = {} }: IProps) => {
+const UserCardBox: FunctionComponent<IProps> = ({ user = {}, familyName }: IProps) => {
     let cssClass = 'card squareCard scalableCard squareCard-scalable';
 
     if (user.Policy?.IsDisabled) {
@@ -74,6 +76,12 @@ const UserCardBox: FunctionComponent<IProps> = ({ user = {} }: IProps) => {
                     <div className='cardText'>
                         <span>{user.Name}</span>
                     </div>
+                    {familyName && (
+                        <div className='cardText cardText-secondary' title={globalize.translate('Family')}>
+                            <span className='material-icons groups' aria-hidden='true' style={{ fontSize: '1.1em', verticalAlign: 'text-bottom', marginRight: '0.3em' }} />
+                            <span>{familyName}</span>
+                        </div>
+                    )}
                     <div className='cardText cardText-secondary'>
                         <span>{lastSeen != '' ? lastSeen : ''}</span>
                     </div>

@@ -3,12 +3,14 @@ import AppSettingsAlt from '@mui/icons-material/AppSettingsAlt';
 import Check from '@mui/icons-material/Check';
 import Close from '@mui/icons-material/Close';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import Diversity3 from '@mui/icons-material/Diversity3';
 import Download from '@mui/icons-material/Download';
 import Edit from '@mui/icons-material/Edit';
 import Logout from '@mui/icons-material/Logout';
 import PhonelinkLock from '@mui/icons-material/PhonelinkLock';
 import Settings from '@mui/icons-material/Settings';
 import Storage from '@mui/icons-material/Storage';
+import SwitchAccount from '@mui/icons-material/SwitchAccount';
 import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
@@ -25,6 +27,7 @@ import { useApi } from 'hooks/useApi';
 import { useQuickConnectEnabled } from 'hooks/useQuickConnect';
 import globalize from 'lib/globalize';
 import shell from 'scripts/shell';
+import { getFamilyId, isFamilyAdministrator } from 'types/family';
 import Dashboard from 'utils/dashboard';
 
 export const ID = 'app-user-menu';
@@ -41,6 +44,8 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
     const { user } = useApi();
     const { data: isQuickConnectEnabled } = useQuickConnectEnabled();
     const { current: currentThemeChoice, apply: applyThemeChoice } = useThemeChoice();
+    const familyId = getFamilyId(user);
+    const isFamilyAdmin = isFamilyAdministrator(user);
 
     const onThemeChoiceClick = useCallback((e: React.MouseEvent<HTMLElement>) => {
         const id = e.currentTarget.dataset.theme;
@@ -115,6 +120,39 @@ const AppUserMenu: FC<AppUserMenuProps> = ({
                     {globalize.translate('Settings')}
                 </ListItemText>
             </MenuItem>
+
+            {/* FAMILY LINKS */}
+            {familyId && ([
+                <Divider key='family-links-divider' />,
+                <MenuItem
+                    key='family-switch-link'
+                    component={Link}
+                    to='/family'
+                    onClick={onMenuClose}
+                >
+                    <ListItemIcon>
+                        <SwitchAccount />
+                    </ListItemIcon>
+                    <ListItemText>
+                        {globalize.translate('SwitchProfile')}
+                    </ListItemText>
+                </MenuItem>,
+                isFamilyAdmin && (
+                    <MenuItem
+                        key='family-manage-link'
+                        component={Link}
+                        to='/family?manage=1'
+                        onClick={onMenuClose}
+                    >
+                        <ListItemIcon>
+                            <Diversity3 />
+                        </ListItemIcon>
+                        <ListItemText>
+                            {globalize.translate('ManageFamily')}
+                        </ListItemText>
+                    </MenuItem>
+                )
+            ])}
 
             <Divider />
             <ListSubheader disableSticky sx={{ bgcolor: 'transparent', lineHeight: '2.4em' }}>

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import globalize from '../../../../lib/globalize';
 import confirm from '../../../../components/confirm/confirm';
 import UserCardBox from '../../../../components/dashboard/users/UserCardBox';
@@ -16,6 +16,8 @@ import Loading from 'components/loading/LoadingComponent';
 import { useDeleteUser } from 'apps/dashboard/features/users/api/useDeleteUser';
 import dom from 'utils/dom';
 import { UserTab } from 'apps/dashboard/features/users/constants/userTab';
+import { useFamilies } from 'hooks/api/family/useFamilies';
+import { getFamilyId } from 'types/family';
 
 type MenuEntry = {
     name?: string;
@@ -29,7 +31,12 @@ const UserProfiles = () => {
     const element = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
     const { data: users, isPending } = useUsers(undefined, { forceRefresh: true });
+    const { data: families } = useFamilies();
     const deleteUser = useDeleteUser();
+
+    const familyNames = useMemo(() => (
+        Object.fromEntries((families ?? []).map(family => [ family.Id, family.Name ]))
+    ), [ families ]);
 
     const handleToastClose = useCallback(() => {
         setIsSettingsSavedToastOpen(false);
@@ -179,7 +186,7 @@ const UserProfiles = () => {
 
                 <div className='localUsers itemsContainer vertical-wrap'>
                     {users?.map(user => {
-                        return <UserCardBox key={user.Id} user={user} />;
+                        return <UserCardBox key={user.Id} user={user} familyName={familyNames[getFamilyId(user) ?? '']} />;
                     })}
                 </div>
             </div>

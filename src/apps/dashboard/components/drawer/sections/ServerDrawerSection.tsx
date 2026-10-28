@@ -1,4 +1,5 @@
 import Dashboard from '@mui/icons-material/Dashboard';
+import Diversity3 from '@mui/icons-material/Diversity3';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import LibraryAdd from '@mui/icons-material/LibraryAdd';
@@ -88,6 +89,14 @@ const ServerDrawerSection = () => {
                         <People />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('HeaderUsers')} />
+                </ListItemLink>
+            </ListItem>
+            <ListItem disablePadding>
+                <ListItemLink to='/dashboard/families'>
+                    <ListItemIcon>
+                        <Diversity3 />
+                    </ListItemIcon>
+                    <ListItemText primary={globalize.translate('Families')} />
                 </ListItemLink>
             </ListItem>
             <ListItem disablePadding>

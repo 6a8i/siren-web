@@ -18,6 +18,7 @@ import { useUpdateUser } from 'apps/dashboard/features/users/api/useUpdateUser';
 import { useUpdateUserPolicy } from 'apps/dashboard/features/users/api/useUpdateUserPolicy';
 import { useNetworkConfig } from 'apps/dashboard/features/users/api/useNetworkConfig';
 import Toast from 'apps/dashboard/components/Toast';
+import { getFamilyId, type SirenUserPolicy } from 'types/family';
 
 interface ProfileProps {
     userDto: UserDto;
@@ -180,7 +181,14 @@ const Profile = ({ userDto }: ProfileProps) => {
         void libraryMenu.then(menu => menu.setTitle(userDto.Name));
 
         (page.querySelector('#txtUserName') as HTMLInputElement).value = userDto.Name || '';
-        (page.querySelector('.chkIsAdmin') as HTMLInputElement).checked = !!userDto.Policy?.IsAdministrator;
+        // A family member can never be a server administrator; they may be the family's administrator instead.
+        const isFamilyMember = !!getFamilyId(userDto);
+        const chkIsAdmin = page.querySelector('.chkIsAdmin') as HTMLInputElement;
+        chkIsAdmin.checked = !!userDto.Policy?.IsAdministrator;
+        chkIsAdmin.disabled = isFamilyMember;
+        (page.querySelector('.familyAdminNote') as HTMLDivElement).classList.toggle('hide', !isFamilyMember);
+        (page.querySelector('.fldIsFamilyAdmin') as HTMLDivElement).classList.toggle('hide', !isFamilyMember);
+        (page.querySelector('.chkIsFamilyAdmin') as HTMLInputElement).checked = !!(userDto.Policy as SirenUserPolicy | undefined)?.IsFamilyAdministrator;
         (page.querySelector('.chkDisabled') as HTMLInputElement).checked = !!userDto.Policy?.IsDisabled;
         (page.querySelector('.chkIsHidden') as HTMLInputElement).checked = !!userDto.Policy?.IsHidden;
         (page.querySelector('.chkEnableCollectionManagement') as HTMLInputElement).checked = !!userDto.Policy?.EnableCollectionManagement;
@@ -223,6 +231,7 @@ const Profile = ({ userDto }: ProfileProps) => {
 
             user.Name = (page.querySelector('#txtUserName') as HTMLInputElement).value.trim();
             user.Policy.IsAdministrator = (page.querySelector('.chkIsAdmin') as HTMLInputElement).checked;
+            (user.Policy as SirenUserPolicy).IsFamilyAdministrator = (page.querySelector('.chkIsFamilyAdmin') as HTMLInputElement).checked;
             user.Policy.IsHidden = (page.querySelector('.chkIsHidden') as HTMLInputElement).checked;
             user.Policy.IsDisabled = (page.querySelector('.chkDisabled') as HTMLInputElement).checked;
             user.Policy.EnableRemoteControlOfOtherUsers = (page.querySelector('.chkEnableRemoteControlOtherUsers') as HTMLInputElement).checked;
@@ -389,6 +398,18 @@ const Profile = ({ userDto }: ProfileProps) => {
                     className='chkIsAdmin'
                     title='OptionAllowUserToManageServer'
                 />
+                <div className='fieldDescription familyAdminNote hide' style={{ marginTop: '-0.5em', marginBottom: '1em' }}>
+                    {globalize.translate('FamilyMembersCannotBeAdmins')}
+                </div>
+                <div className='checkboxContainer checkboxContainer-withDescription fldIsFamilyAdmin hide'>
+                    <CheckBoxElement
+                        className='chkIsFamilyAdmin'
+                        title='FamilyAdministrator'
+                    />
+                    <div className='fieldDescription checkboxFieldDescription'>
+                        {globalize.translate('FamilyAdministratorHelp')}
+                    </div>
+                </div>
                 <CheckBoxElement
                     labelClassName='checkboxContainer'
                     className='chkEnableCollectionManagement'

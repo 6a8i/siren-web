@@ -17,6 +17,7 @@ import browser from 'scripts/browser';
 import Dashboard from 'utils/dashboard';
 import shell from 'scripts/shell';
 import keyboardNavigation from 'scripts/keyboardNavigation';
+import { getFamilyId, isFamilyAdministrator } from 'types/family';
 
 const UserSettingsPage: FC = () => {
     const { user: currentUser } = useApi();
@@ -34,6 +35,8 @@ const UserSettingsPage: FC = () => {
     const isLoggedInUser = useMemo(() => (
         userId && userId === currentUser?.Id
     ), [ currentUser, userId ]);
+    const familyId = getFamilyId(currentUser);
+    const isFamilyAdmin = isFamilyAdministrator(currentUser);
 
     useEffect(() => {
         if (userId) {
@@ -263,6 +266,59 @@ const UserSettingsPage: FC = () => {
                             </LinkButton>
                         )}
                     </div>
+
+                    {isLoggedInUser && familyId && (
+                        <div className='familySection verticalSection verticalSection-extrabottompadding'>
+                            <h2
+                                className='sectionTitle headerUsername'
+                                style={{
+                                    paddingLeft: '0.25em'
+                                }}
+                            >
+                                {globalize.translate('MyFamily')}
+                            </h2>
+
+                            <LinkButton
+                                href='#/family'
+                                className='lnkSwitchProfile listItem-border'
+                                style={{
+                                    display: 'block',
+                                    margin: 0,
+                                    padding: 0
+                                }}
+                            >
+                                <div className='listItem'>
+                                    <span className='material-icons listItemIcon listItemIcon-transparent switch_account' aria-hidden='true' />
+                                    <div className='listItemBody'>
+                                        <div className='listItemBodyText'>
+                                            {globalize.translate('SwitchProfile')}
+                                        </div>
+                                    </div>
+                                </div>
+                            </LinkButton>
+
+                            {isFamilyAdmin && (
+                                <LinkButton
+                                    href='#/family?manage=1'
+                                    className='lnkManageFamily listItem-border'
+                                    style={{
+                                        display: 'block',
+                                        margin: 0,
+                                        padding: 0
+                                    }}
+                                >
+                                    <div className='listItem'>
+                                        <span className='material-icons listItemIcon listItemIcon-transparent groups' aria-hidden='true' />
+                                        <div className='listItemBody'>
+                                            <div className='listItemBodyText'>
+                                                {globalize.translate('ManageFamily')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </LinkButton>
+                            )}
+                        </div>
+                    )}
 
                     {isLoggedInUser && user.Policy?.IsAdministrator && !layoutManager.tv && (
                         <div className='adminSection verticalSection verticalSection-extrabottompadding'>
