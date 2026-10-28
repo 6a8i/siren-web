@@ -236,7 +236,6 @@ const config = {
                     nodeModule('markdown-it'),
                     nodeModule('material-react-table'),
                     nodeModule('mdurl'),
-                    nodeModule('proxy-polyfill'),
                     nodeModule('punycode'),
                     nodeModule('react-blurhash'),
                     nodeModule('react-lazy-load-image-component'),

@@ -11,7 +11,7 @@ para abrir o aplicativo; nada abaixo disso recebe código transpilado nem polyfi
 | Babel (`babel.config.js`) | `@babel/preset-env` guiado pela `browserslist` do `package.json`, com `bugfixes: true` | Os arquivos `.js`/`.jsx` e os pacotes listados em `webpack.common.js` são rebaixados só até o navegador mais antigo da lista. Com `bugfixes`, um defeito de um motor (por exemplo o cache de tagged templates do Safari 12) reescreve apenas a forma defeituosa, em vez de rebaixar a funcionalidade inteira para todos os alvos. |
 | webpack (`target: 'browserslist'`) | a mesma `browserslist` | O código de runtime do webpack usa `const`, arrow functions e template literals quando todos os alvos aceitam. |
 | `es-check` (`.escheckrc`) | `ecmaVersion: es2017` | `npm run escheck` falha se algum arquivo de `dist/` contiver sintaxe acima de ES2017 (os workers e o service worker continuam fora da verificação). |
-| Polyfills (`src/lib/legacy`) | sem alteração | `core-js/stable`, `whatwg-fetch`, `intersection-observer`, `resize-observer-polyfill` e os demais continuam incluídos. APIs posteriores a ES2017 (`Promise.prototype.finally`, `Array.prototype.flat`, `Object.fromEntries`, `String.prototype.matchAll`…) seguem vindo do `core-js`. |
+| Polyfills (`src/lib/legacy`) | só os que algum alvo ainda precisa | Veja a tabela em [Polyfills](#polyfills): os da era ES5 (`whatwg-fetch`, `proxy-polyfill`, `element-closest-polyfill`, `regenerator-runtime`) saíram; `core-js/stable`, `intersection-observer`, `resize-observer-polyfill`, `abortcontroller-polyfill`, `fast-text-encoding` e `classlist.js` ficam. APIs posteriores a ES2017 (`Promise.prototype.finally`, `Array.prototype.flat`, `Object.fromEntries`, `String.prototype.matchAll`…) seguem vindo do `core-js`. |
 
 A lista exata (`browserslist` em `package.json`):
 
@@ -35,6 +35,30 @@ Samsung >= 6
 As entradas `last 2 …` e `Firefox ESR` vêm da lista anterior e continuam valendo; os pisos `>=` são as
 primeiras versões de cada navegador com suporte completo a ES2017 (`async`/`await`, `Object.values`,
 `Object.entries`, `String.prototype.padStart`/`padEnd`, vírgula final em parâmetros).
+
+## Polyfills
+
+`src/lib/legacy/index.ts` importa só os polyfills que algum navegador da lista ainda precisa. A
+decisão por pacote, com a primeira versão de cada motor que traz a API nativa (dados do
+`caniuse-lite` e da MDN; os pisos são Chrome 55, Firefox 52, Safari 10.1, iOS 10.3, Edge 15,
+Opera 42 e Samsung 6):
+
+| Pacote | Decisão | Motivo |
+| --- | --- | --- |
+| `core-js/stable` | **Fica** | O Babel só injeta os módulos do `core-js` (`useBuiltIns: 'usage'`) nos arquivos que ele compila; os `.ts`/`.tsx` saem do `ts-loader` e os pacotes fora da lista de inclusão do Babel não passam por ele. Esses dois grupos usam APIs posteriores a ES2017 que os pisos não têm: `Promise.prototype.finally` (Chrome 63, Firefox 58, Safari 11.1, Edge 18), `Object.fromEntries` (Chrome 73, Firefox 63, Safari 12.1), `Array.prototype.flat` (Chrome 69, Firefox 62, Safari 12), `String.prototype.matchAll` (Chrome 73, Firefox 67, Safari 13). |
+| `regenerator-runtime/runtime` | **Sai** | Nenhum alvo precisa do runtime como global: o `ts-loader` mantém `async`/`await` e generators nativos (alvo ES2017) e o Babel atual embute o helper de regenerator dentro de cada arquivo que ele reescreve (o `transform-regenerator` ainda roda para o Firefox 52), sem referenciar `regeneratorRuntime` nem importar o pacote. O bundle `node_modules.regenerator-runtime` desaparece do `dist/`. |
+| `element-closest-polyfill` | **Sai** | `Element.closest`: Chrome 41, Firefox 35, Safari 9, Edge 15, Opera 28, Samsung 5. Todos os pisos têm. |
+| `fast-text-encoding` | **Fica** | `TextEncoder`/`TextDecoder`: o EdgeHTML nunca teve (Edge 15 a 18; só o Edge 79, Chromium). Os demais pisos têm (Chrome 38, Firefox 20, Safari 10.1, Opera 25, Samsung 4). |
+| `intersection-observer` | **Fica** | `IntersectionObserver`: Chrome 58 (51 parcial), Firefox 55, Safari 12.1 (iOS 12.2), Edge 16, Opera 45, Samsung 7.2. Falta no Firefox 52, no Safari 10.1–12 e no Edge 15. |
+| `classlist.js` | **Fica** | `classList` em si existe em todos os pisos (Chrome 28, Firefox 26, Safari 7, Edge 12), mas `DOMTokenList.replace()`, usado em `components/slideshow`, só chega no Chrome 61, Edge 17, Opera 48 e Samsung 8 (Firefox 49 e Safari 10.1 têm). O pacote polyfilla o `replace()`. Pode sair quando as duas chamadas do slideshow virarem `remove()` + `add()`. |
+| `whatwg-fetch` | **Sai** | `fetch`: Chrome 42, Firefox 39, Safari 10.1, iOS 10.3, Edge 14, Opera 29, Samsung 4. Todos os pisos têm. O `abortcontroller-polyfill` passa a remendar o `fetch` nativo. |
+| `abortcontroller-polyfill` | **Fica** | `AbortController` e o `signal` no `fetch`: Chrome 66, Firefox 57, Safari 12.1 (iOS 12.2), Edge 16, Opera 53, Samsung 9.2. Nenhum piso tem. |
+| `resize-observer-polyfill` | **Fica** | `ResizeObserver`: Chrome 64, Firefox 69, Safari 13.1 (iOS 13.4), Edge 79, Opera 52, Samsung 9.2. Nenhum piso tem. |
+| `proxy-polyfill` | **Sai** | `Proxy`: Chrome 49, Firefox 18, Safari 10, iOS 10, Edge 12, Opera 36, Samsung 5. Todos os pisos têm (e o polyfill só cobria `get`/`set`/`apply`/`construct`). |
+
+Os pacotes removidos continuam em `package.json` até uma limpeza das dependências; o
+`eslint-plugin-compat` ainda lista `fetch`/`Response` como polyfilled em `eslint.config.mjs`, o que
+não muda nenhum aviso porque todos os alvos têm `fetch` nativo.
 
 ## Navegadores suportados
 
