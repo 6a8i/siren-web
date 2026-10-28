@@ -210,6 +210,11 @@ export const Component = () => {
                         </Button>
 
                         <Box className='readOnlyContent'>
+                            {backups.length === 0 && (
+                                <Typography color='text.secondary'>
+                                    {globalize.translate('LabelBackupsUnavailable')}
+                                </Typography>
+                            )}
                             {backups.length > 0 && (
                                 <List sx={{ bgcolor: 'background.paper' }}>
                                     {backups.map(backup => {

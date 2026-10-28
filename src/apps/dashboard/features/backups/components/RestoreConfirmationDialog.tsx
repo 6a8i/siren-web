@@ -28,6 +28,8 @@ const RestoreConfirmationDialog: FunctionComponent<IProps> = ({ open, onClose, o
             <DialogContent>
                 <DialogContentText sx={{ whiteSpace: 'pre-line' }}>
                     {globalize.translate('MessageRestoreDisclaimer')}
+                    {'\n\n'}
+                    {globalize.translate('MessageRestoreRestarts')}
                 </DialogContentText>
             </DialogContent>
 
