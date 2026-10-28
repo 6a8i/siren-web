@@ -1,7 +1,5 @@
-import Article from '@mui/icons-material/Article';
 import Backup from '@mui/icons-material/Backup';
 import Lan from '@mui/icons-material/Lan';
-import Schedule from '@mui/icons-material/Schedule';
 import VpnKey from '@mui/icons-material/VpnKey';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
@@ -13,13 +11,14 @@ import React from 'react';
 import ListItemLink from 'components/ListItemLink';
 import globalize from 'lib/globalize';
 
+/** The system-level settings that are set once and rarely revisited. */
 const AdvancedDrawerSection = () => {
     return (
         <List
-            aria-labelledby='advanced-subheader'
+            aria-labelledby='system-subheader'
             subheader={
-                <ListSubheader component='div' id='advanced-subheader'>
-                    {globalize.translate('TabAdvanced')}
+                <ListSubheader component='div' id='system-subheader'>
+                    {globalize.translate('LabelSystem')}
                 </ListSubheader>
             }
         >
@@ -45,22 +44,6 @@ const AdvancedDrawerSection = () => {
                         <Backup />
                     </ListItemIcon>
                     <ListItemText primary={globalize.translate('HeaderBackups')} />
-                </ListItemLink>
-            </ListItem>
-            <ListItem disablePadding>
-                <ListItemLink to='/dashboard/logs'>
-                    <ListItemIcon>
-                        <Article />
-                    </ListItemIcon>
-                    <ListItemText primary={globalize.translate('TabLogs')} />
-                </ListItemLink>
-            </ListItem>
-            <ListItem disablePadding>
-                <ListItemLink to='/dashboard/tasks'>
-                    <ListItemIcon>
-                        <Schedule />
-                    </ListItemIcon>
-                    <ListItemText primary={globalize.translate('TabScheduledTasks')} />
                 </ListItemLink>
             </ListItem>
         </List>

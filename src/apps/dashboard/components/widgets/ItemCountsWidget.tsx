@@ -7,6 +7,7 @@ import Tv from '@mui/icons-material/Tv';
 import VideoLibrary from '@mui/icons-material/VideoLibrary';
 import Grid from '@mui/material/Grid';
 import SvgIcon from '@mui/material/SvgIcon';
+import Typography from '@mui/material/Typography';
 import React, { useMemo } from 'react';
 
 import { useItemCounts } from 'apps/dashboard/features/metrics/api/useItemCounts';
@@ -74,6 +75,14 @@ const ItemCountsWidget = () => {
                 }))
             }));
     }, [ counts, isPending ]);
+
+    if (!isPending && cards.length === 0) {
+        return (
+            <Typography variant='body2' color='text.secondary'>
+                {globalize.translate('DashboardNoLibraries')}
+            </Typography>
+        );
+    }
 
     return (
         <Box>

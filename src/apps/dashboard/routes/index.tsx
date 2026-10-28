@@ -1,7 +1,6 @@
 import { TaskState } from '@jellyfin/sdk/lib/generated-client/models/task-state';
 import { OutboundWebSocketMessageType } from '@jellyfin/sdk/lib/websocket';
 import Box from '@mui/material/Box';
-import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -11,18 +10,23 @@ import Page from 'components/Page';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
 
-import ServerPathWidget from '../components/widgets/ServerPathWidget';
-import ServerInfoWidget from '../components/widgets/ServerInfoWidget';
-import ActivityLogWidget from '../components/widgets/ActivityLogWidget';
-import AlertsLogWidget from '../components/widgets/AlertsLogWidget';
+import LibrarySection from '../components/overview/LibrarySection';
+import OverviewHeader from '../components/overview/OverviewHeader';
+import OverviewTiles from '../components/overview/OverviewTiles';
+import RecentActivitySection from '../components/overview/RecentActivitySection';
+import RunningTasksSection from '../components/overview/RunningTasksSection';
+import SessionsWidget from '../components/overview/SessionsWidget';
+import StorageSection from '../components/overview/StorageSection';
 import useShutdownServer from '../features/system/api/useShutdownServer';
 import useRestartServer from '../features/system/api/useRestartServer';
 import useLiveTasks from '../features/tasks/hooks/useLiveTasks';
-import RunningTasksWidget from '../components/widgets/RunningTasksWidget';
-import DevicesWidget from '../components/widgets/DevicesWidget';
 import { useStartTask } from '../features/tasks/api/useStartTask';
-import ItemCountsWidget from '../components/widgets/ItemCountsWidget';
 
+/**
+ * The dashboard overview: the server's name and actions, four numbers that say how it is doing,
+ * then what is happening now on the left and what happened recently on the right. Detail that is
+ * rarely needed (storage paths) stays folded.
+ */
 export const Component = () => {
     const { api } = useApi();
     const [ isRestartConfirmDialogOpen, setIsRestartConfirmDialogOpen ] = useState(false);
@@ -106,30 +110,41 @@ export const Component = () => {
                 confirmButtonColor='error'
             />
             <Box className='content-primary'>
-                <Grid container spacing={3}>
-                    <Grid item xs={12} md={7} lg={7} xl={6}>
+                <Stack spacing={3}>
+                    <OverviewHeader
+                        onScanLibrariesClick={onScanLibraries}
+                        onRestartClick={promptRestart}
+                        onShutdownClick={promptShutdown}
+                        isScanning={librariesTask?.State !== TaskState.Idle}
+                    />
+
+                    <OverviewTiles tasks={tasks} />
+
+                    <RunningTasksSection tasks={tasks} />
+
+                    <Box
+                        sx={{
+                            display: 'grid',
+                            gap: 3,
+                            alignItems: 'start',
+                            gridTemplateColumns: {
+                                xs: 'minmax(0, 1fr)',
+                                lg: 'minmax(0, 7fr) minmax(0, 5fr)',
+                                xl: 'minmax(0, 2fr) minmax(0, 1fr)'
+                            }
+                        }}
+                    >
                         <Stack spacing={3}>
-                            <ServerInfoWidget
-                                onScanLibrariesClick={onScanLibraries}
-                                onRestartClick={promptRestart}
-                                onShutdownClick={promptShutdown}
-                                isScanning={librariesTask?.State !== TaskState.Idle}
-                            />
-                            <ItemCountsWidget />
-                            <RunningTasksWidget tasks={tasks} />
-                            <DevicesWidget />
+                            <SessionsWidget />
+                            <LibrarySection />
                         </Stack>
-                    </Grid>
-                    <Grid item xs={12} md={5} lg={5} xl={3}>
-                        <ActivityLogWidget />
-                    </Grid>
-                    <Grid item xs={12} md={6} lg={12} xl={3}>
                         <Stack spacing={3}>
-                            <AlertsLogWidget />
-                            <ServerPathWidget />
+                            <RecentActivitySection />
+                            <RecentActivitySection alerts />
+                            <StorageSection />
                         </Stack>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Stack>
             </Box>
         </Page>
     );

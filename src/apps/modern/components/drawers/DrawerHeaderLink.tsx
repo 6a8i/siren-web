@@ -13,19 +13,21 @@ const DrawerHeaderLink = () => {
     const { data: systemInfo } = useSystemInfo();
 
     return (
-        <ListItemLink to='/'>
-            <ListItemIcon sx={{ minWidth: 56 }}>
+        <ListItemLink to='/' sx={{ py: 1.5 }}>
+            <ListItemIcon sx={{ minWidth: 48 }}>
                 <Box
                     component='img'
                     src={appIcon}
-                    sx={{ height: '2.5rem' }}
+                    alt=''
+                    sx={{ height: '2rem' }}
                 />
             </ListItemIcon>
             <ListItemText
                 primary={systemInfo?.ServerName || 'Siren'}
                 secondary={getDisplayVersion(systemInfo?.Version)}
                 slotProps={{
-                    primary: { variant: 'h6' }
+                    primary: { variant: 'h6', noWrap: true, sx: { fontSize: '1.05rem', lineHeight: 1.2 } },
+                    secondary: { variant: 'caption' }
                 }}
             />
         </ListItemLink>);
