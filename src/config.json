@@ -3,6 +3,15 @@
   "multiserver": false,
   "themes": [
     {
+      "name": "Siren",
+      "id": "siren",
+      "color": "#0b0f17",
+      "default": true
+    }, {
+      "name": "Siren Light",
+      "id": "sirenlight",
+      "color": "#f4f7fb"
+    },     {
       "name": "Apple TV",
       "id": "appletv",
       "color": "#bcbcbc"
@@ -13,8 +22,7 @@
     }, {
       "name": "Dark",
       "id": "dark",
-      "color": "#202020",
-      "default": true
+      "color": "#202020"
     }, {
       "name": "Light",
       "id": "light",

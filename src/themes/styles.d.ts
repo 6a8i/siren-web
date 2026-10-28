@@ -6,6 +6,8 @@ declare module '@mui/material/styles' {
         appletv: true;
         blueradiance: true;
         purplehaze: true;
+        siren: true;
+        sirenlight: true;
         wmc: true;
     }
 

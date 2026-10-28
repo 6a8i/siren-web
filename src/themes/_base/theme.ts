@@ -34,19 +34,28 @@ export const DEFAULT_COLOR_SCHEME: ColorSystemOptions = {
 
 /** The default customizations to the default MUI theme. */
 export const DEFAULT_THEME_OPTIONS: ThemeOptions = {
+    shape: {
+        borderRadius: 10
+    },
     typography: {
         fontFamily: '"Noto Sans", sans-serif',
         button: {
-            textTransform: 'none'
+            textTransform: 'none',
+            fontWeight: 600
         },
         h1: {
-            fontSize: '1.8rem'
+            fontSize: '1.8rem',
+            fontWeight: 600,
+            letterSpacing: '-0.015em'
         },
         h2: {
-            fontSize: '1.5rem'
+            fontSize: '1.5rem',
+            fontWeight: 600,
+            letterSpacing: '-0.015em'
         },
         h3: {
-            fontSize: '1.17rem'
+            fontSize: '1.17rem',
+            fontWeight: 600
         }
     },
     components: {
@@ -69,6 +78,15 @@ export const DEFAULT_THEME_OPTIONS: ThemeOptions = {
             defaultProps: {
                 variant: 'contained'
             },
+            styleOverrides: {
+                root: {
+                    borderRadius: 999,
+                    paddingInline: 18
+                },
+                contained: {
+                    boxShadow: 'none'
+                }
+            },
             variants: [
                 {
                     props: {
@@ -80,6 +98,28 @@ export const DEFAULT_THEME_OPTIONS: ThemeOptions = {
                     }
                 }
             ]
+        },
+        MuiCard: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 14
+                }
+            }
+        },
+        MuiChip: {
+            styleOverrides: {
+                root: {
+                    fontWeight: 500
+                }
+            }
+        },
+        MuiDrawer: {
+            styleOverrides: {
+                paper: ({ theme }) => ({
+                    borderRight: `1px solid ${theme.vars.palette.divider}`,
+                    backgroundImage: 'none'
+                })
+            }
         },
         MuiFormControl: {
             defaultProps: {
@@ -96,6 +136,24 @@ export const DEFAULT_THEME_OPTIONS: ThemeOptions = {
         MuiTextField: {
             defaultProps: {
                 variant: 'filled'
+            }
+        },
+        MuiListItemButton: {
+            styleOverrides: {
+                root: ({ theme }) => ({
+                    borderRadius: 8,
+                    marginInline: 8,
+                    paddingInline: 12,
+                    '&.Mui-selected': {
+                        color: theme.vars.palette.primary.main
+                    },
+                    '&.Mui-selected .MuiListItemIcon-root': {
+                        color: theme.vars.palette.primary.main
+                    },
+                    '&.Mui-selected .MuiListItemText-primary': {
+                        fontWeight: 600
+                    }
+                })
             }
         },
         MuiListItemIcon: {
@@ -118,6 +176,20 @@ export const DEFAULT_THEME_OPTIONS: ThemeOptions = {
             styleOverrides: {
                 inset: {
                     paddingLeft: LIST_ICON_WIDTH
+                }
+            }
+        },
+        MuiPaper: {
+            styleOverrides: {
+                rounded: {
+                    borderRadius: 12
+                }
+            }
+        },
+        MuiToolbar: {
+            styleOverrides: {
+                dense: {
+                    minHeight: 52
                 }
             }
         }

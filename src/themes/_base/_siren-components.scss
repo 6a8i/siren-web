@@ -1,0 +1,395 @@
+// Siren design system: component styling shared by the Siren colour schemes.
+//
+// Everything here reads the MUI palette through the --jf-palette-* custom properties, so the same
+// rules serve the dark and the light scheme; only a few surface tokens depend on $dark.
+// Nothing in this file adds markup, scripts, fonts or images: it is CSS over the existing elements.
+
+$dark: true !default;
+
+// Light defaults, replaced below for the dark scheme.
+$shadow-color: rgba(15, 23, 42, 0.14);
+$glass-bg: rgba(244, 247, 251, 0.8);
+$panel-border: rgba(15, 23, 42, 0.09);
+$panel-bg: rgba(255, 255, 255, 0.9);
+$overlay-strong: rgba(15, 23, 42, 0.66);
+
+@if $dark {
+    $shadow-color: rgba(0, 0, 0, 0.5);
+    $glass-bg: rgba(11, 15, 23, 0.74);
+    $panel-border: rgba(255, 255, 255, 0.08);
+    $panel-bg: rgba(255, 255, 255, 0.04);
+    $overlay-strong: rgba(5, 8, 14, 0.78);
+}
+
+:root {
+    --siren-radius-sm: 0.55em;
+    --siren-radius: 0.8em;
+    --siren-radius-lg: 1.15em;
+    --siren-shadow-1: 0 1px 2px #{$shadow-color};
+    --siren-shadow-2: 0 10px 28px -10px #{$shadow-color};
+    --siren-panel-border: #{$panel-border};
+    --siren-panel-bg: #{$panel-bg};
+    --siren-glass-bg: #{$glass-bg};
+    --siren-overlay-strong: #{$overlay-strong};
+    --siren-focus-ring: 0 0 0 3px rgba(var(--jf-palette-primary-mainChannel) / 0.28);
+}
+
+/* ---------- Typography ---------- */
+
+h1,
+h2,
+h3,
+.sectionTitle,
+.pageTitle,
+.formDialogHeaderTitle {
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+.fieldDescription {
+    font-size: 0.92em;
+    opacity: 0.85;
+}
+
+.sidebarHeader {
+    font-size: 0.74em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.65;
+}
+
+/* ---------- Header ---------- */
+
+.skinHeader-withBackground {
+    background-color: var(--siren-glass-bg);
+    border-bottom: 1px solid var(--siren-panel-border);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .skinHeader-withBackground:not(.semiTransparent) {
+        backdrop-filter: blur(18px) saturate(150%);
+    }
+}
+
+.layout-tv .skinHeader-withBackground {
+    border-bottom: 0;
+}
+
+.headerTop {
+    padding: 0.55em 0.5em;
+}
+
+/* ---------- Icon buttons ---------- */
+
+.paper-icon-button-light {
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+/* ---------- Buttons ---------- */
+
+.emby-button:not(.button-link):not(.fab) {
+    border-radius: 999px;
+    padding: 0.72em 1.35em;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, color 0.15s ease, filter 0.15s ease;
+}
+
+.emby-button.raised:not(.button-submit):not(.button-delete),
+a[data-role="button"] {
+    border: 1px solid var(--siren-panel-border);
+    box-shadow: var(--siren-shadow-1);
+}
+
+.emby-button.raised:not(.button-submit):not(.button-delete):hover {
+    border-color: rgba(var(--jf-palette-primary-mainChannel) / 0.5);
+}
+
+.emby-button.button-submit {
+    background: linear-gradient(135deg, var(--jf-palette-primary-main) 0%, var(--jf-palette-secondary-main) 100%);
+    color: var(--jf-palette-primary-contrastText);
+    box-shadow: 0 8px 22px -8px rgba(var(--jf-palette-primary-mainChannel) / 0.7);
+}
+
+.emby-button.button-submit:hover {
+    background: linear-gradient(135deg, var(--jf-palette-primary-main) 0%, var(--jf-palette-secondary-main) 100%);
+    filter: brightness(1.07);
+    transform: translateY(-1px);
+}
+
+.emby-button.button-submit:focus {
+    background: linear-gradient(135deg, var(--jf-palette-primary-main) 0%, var(--jf-palette-secondary-main) 100%);
+    color: var(--jf-palette-primary-contrastText);
+    box-shadow: var(--siren-focus-ring);
+}
+
+.emby-button.button-delete {
+    box-shadow: 0 8px 22px -8px rgba(var(--jf-palette-error-mainChannel) / 0.7);
+}
+
+.emby-button.button-delete:hover {
+    filter: brightness(1.07);
+}
+
+.emby-button > .material-icons {
+    font-size: 1.25em;
+}
+
+.layout-tv .emby-button.show-focus:focus,
+.layout-tv .emby-button.button-submit.show-focus:focus {
+    background: var(--jf-palette-secondary-main);
+    color: var(--jf-palette-secondary-contrastText);
+}
+
+/* ---------- Inputs ---------- */
+
+.emby-input,
+.emby-textarea {
+    border-radius: var(--siren-radius-sm);
+    border-width: 1px;
+    padding: 0.62em 0.85em;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.emby-input:focus,
+.emby-textarea:focus {
+    border-color: var(--jf-palette-primary-main);
+    box-shadow: var(--siren-focus-ring);
+}
+
+.emby-select-withcolor {
+    border-radius: var(--siren-radius-sm);
+    border-width: 1px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.emby-select-withcolor:not(.selectContainer-inline > *) {
+    padding-top: 0.62em;
+    padding-bottom: 0.62em;
+}
+
+.emby-select-withcolor:focus {
+    border-color: var(--jf-palette-primary-main) !important;
+    box-shadow: var(--siren-focus-ring);
+}
+
+.inputLabel,
+.selectLabel,
+.textareaLabel,
+.checkboxListLabel,
+.paperListLabel {
+    font-size: 0.9em;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+}
+
+.inputLabel {
+    margin-bottom: 0.4em;
+}
+
+.checkboxOutline {
+    border-radius: 0.4em;
+    border-width: 2px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.emby-checkbox:focus + span + .checkboxOutline {
+    box-shadow: var(--siren-focus-ring);
+}
+
+/* ---------- Cards ---------- */
+
+.cardBox {
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.layout-desktop .card-hoverable:hover .cardBox:not(.visualCardBox),
+.layout-desktop .card-hoverable:focus-within .cardBox:not(.visualCardBox) {
+    transform: translateY(-3px);
+}
+
+.layout-desktop .card-hoverable:hover .cardImageContainer,
+.layout-desktop .card-hoverable:focus-within .cardImageContainer {
+    box-shadow: var(--siren-shadow-2);
+}
+
+.cardOverlayContainer {
+    background: linear-gradient(to top, var(--siren-overlay-strong) 0%, rgba(0, 0, 0, 0.2) 70%);
+    border-radius: var(--jf-card-borderRadius);
+}
+
+.cardOverlayContainer > .cardOverlayFab-primary {
+    background-color: rgba(var(--jf-palette-primary-mainChannel) / 0.92);
+    color: var(--jf-palette-primary-contrastText);
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.6);
+}
+
+.visualCardBox {
+    border: 1px solid var(--siren-panel-border);
+    box-shadow: var(--siren-shadow-1);
+}
+
+.cardText-first,
+.cardText:first-child {
+    font-weight: 500;
+}
+
+/* ---------- Panels and lists ---------- */
+
+.paperList,
+.collapseContent {
+    border: 1px solid var(--siren-panel-border);
+}
+
+.collapseContent {
+    border-radius: var(--siren-radius-sm);
+}
+
+.listItem-border {
+    border-width: 0;
+    border-bottom-width: 1px;
+}
+
+.listItem {
+    transition: background-color 0.15s ease;
+}
+
+.mediaInfoText {
+    border-radius: 0.4em;
+    border-color: var(--siren-panel-border);
+    padding: 0.15em 0.5em;
+}
+
+.infoBanner {
+    border-radius: var(--siren-radius-sm);
+    border: 1px solid rgba(var(--jf-palette-primary-mainChannel) / 0.35);
+}
+
+/* ---------- Drawer ---------- */
+
+.mainDrawer {
+    border-right: 1px solid var(--siren-panel-border);
+}
+
+[dir="rtl"] .mainDrawer {
+    border-right: 0;
+    border-left: 1px solid var(--siren-panel-border);
+}
+
+.navMenuOption {
+    margin: 0.12em 0.7em !important;
+    border-radius: var(--siren-radius-sm) !important;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+[dir="ltr"] .navMenuOption {
+    padding: 0.72em 0.8em 0.72em 1.2em !important;
+}
+
+[dir="rtl"] .navMenuOption {
+    padding: 0.72em 1.2em 0.72em 0.8em !important;
+}
+
+.navMenuOption-selected {
+    background: rgba(var(--jf-palette-primary-mainChannel) / 0.16) !important;
+    color: var(--jf-palette-primary-main);
+    font-weight: 600 !important;
+}
+
+.navMenuOptionIcon {
+    opacity: 0.92;
+}
+
+/* ---------- Tabs ---------- */
+
+.emby-tab-button {
+    padding: 1.1em 1.25em;
+    transition: color 0.15s ease;
+}
+
+.emby-tab-button-active::after {
+    content: "";
+    position: absolute;
+    left: 1.25em;
+    right: 1.25em;
+    bottom: 0.55em;
+    height: 3px;
+    border-radius: 3px;
+    background: var(--jf-palette-primary-main);
+}
+
+.layout-tv .emby-tab-button-active::after {
+    display: none;
+}
+
+/* ---------- Dialogs, toasts, progress ---------- */
+
+.dialog:not(.dialog-fixedSize):not(.dialog-fullscreen) {
+    border-radius: var(--siren-radius-lg);
+    border: 1px solid var(--siren-panel-border);
+}
+
+.formDialogHeader:not(.formDialogHeader-clear) {
+    border-bottom: 1px solid var(--siren-panel-border);
+}
+
+.formDialogFooter:not(.formDialogFooter-clear) {
+    border-top: 1px solid var(--siren-panel-border);
+}
+
+.toast {
+    border-radius: var(--siren-radius-sm);
+    border: 1px solid var(--siren-panel-border);
+    box-shadow: var(--siren-shadow-2);
+}
+
+.itemProgressBar,
+.itemProgressBarForeground {
+    border-radius: 999px;
+}
+
+progress,
+progress::-webkit-progress-bar,
+progress::-moz-progress-bar,
+progress::-webkit-progress-value {
+    border-radius: 999px;
+}
+
+.countIndicator,
+.playedIndicator {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- Scrollbars ---------- */
+
+* {
+    scrollbar-color: rgba(128, 140, 160, 0.45) transparent;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+::-webkit-scrollbar-thumb:horizontal,
+::-webkit-scrollbar-thumb:vertical {
+    border-radius: 999px;
+    background: rgba(128, 140, 160, 0.45);
+}
+
+/* ---------- Motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .emby-button:not(.button-link):not(.fab),
+    .cardBox,
+    .navMenuOption,
+    .listItem {
+        transition: none;
+    }
+
+    .layout-desktop .card-hoverable:hover .cardBox:not(.visualCardBox) {
+        transform: none;
+    }
+}

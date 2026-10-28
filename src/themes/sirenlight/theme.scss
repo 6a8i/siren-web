@@ -1,0 +1,104 @@
+/* Siren Light: the same design on bright surfaces. */
+
+$background-default: #f4f7fb;
+$background-paper: #fff;
+$primary-main: #0d9488;
+$primary-dark: #0f766e;
+$primary-light: #14b8a6;
+$primary-contrastText: #fff;
+$secondary-main: #0284c7;
+$secondary-contrastText: #fff;
+$text-primary: #0f172a;
+$text-secondary: rgba(15, 23, 42, 0.68);
+
+$background-image:
+    radial-gradient(1200px 620px at 8% -12%, rgba(13, 148, 136, 0.12), transparent 60%),
+    radial-gradient(900px 520px at 100% -4%, rgba(2, 132, 199, 0.1), transparent 55%);
+
+@use "../_base/theme" with (
+    $dark: false,
+    $rounded-person-cards: true,
+    $background-default: $background-default,
+    $background-defaultImage: $background-image,
+    $background-paper: $background-paper,
+    $primary-main: $primary-main,
+    $primary-dark: $primary-dark,
+    $primary-light: $primary-light,
+    $primary-hover: rgba(13, 148, 136, 0.12),
+    $primary-contrastText: $primary-contrastText,
+    $secondary-main: $secondary-main,
+    $secondary-contrastText: $secondary-contrastText,
+    $error-main: #dc2626,
+    $error-dark: #b91c1c,
+    $error-light: #ef4444,
+    $error-contrastText: #ffffff,
+    $text-primary: $text-primary,
+    $text-secondary: $text-secondary,
+    $action-focus: rgba(13, 148, 136, 0.14),
+    $action-hover: rgba(15, 23, 42, 0.05),
+    $divider: rgba(15, 23, 42, 0.1),
+    $appBar-defaultBg: rgba(244, 247, 251, 0.8),
+    $appBar-transparentBg: rgba(244, 247, 251, 0.35),
+    $surface-overlay: #ffffff,
+    $filledInput-bg: #ffffff,
+    $filledInput-borderColor: rgba(15, 23, 42, 0.16),
+    $card-borderRadius: 0.8em,
+    $alert-infoFilledBg: #dbeffb,
+    $alert-infoFilledColor: #0c3d5c,
+    $button-inheritContainedBg: #e9eef5,
+    $button-inheritContainedHoverBg: #dde5ee,
+    $snackbarContent-bg: #1e293b,
+    $snackbarContent-color: #f8fafc
+);
+@use "../_base/siren-components" with (
+    $dark: false
+);
+
+.defaultCardBackground1 {
+    background-color: #99f6e4;
+}
+
+.defaultCardBackground2 {
+    background-color: #bae6fd;
+}
+
+.defaultCardBackground3 {
+    background-color: #5eead4;
+}
+
+.defaultCardBackground4 {
+    background-color: #c7d2fe;
+}
+
+.defaultCardBackground5 {
+    background-color: #fed7aa;
+}
+
+.detailRibbon {
+    background: rgba(244, 247, 251, 0.85);
+
+    .layout-tv & {
+        background: none;
+    }
+}
+
+.appfooter {
+    border-top: 1px solid rgba(15, 23, 42, 0.09);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .appfooter {
+        background: rgba(244, 247, 251, 0.8);
+        backdrop-filter: blur(18px) saturate(150%);
+    }
+}
+
+.drawer-open {
+    background-color: #fff;
+}
+
+/* Overlays keep light text on light theme too */
+.cardOverlayContainer,
+.cardOverlayContainer .paper-icon-button-light {
+    color: #fff;
+}

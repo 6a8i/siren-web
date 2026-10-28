@@ -1,0 +1,102 @@
+/* Siren: the default colour scheme. Deep navy surfaces, a teal-to-sky accent and warm highlights. */
+
+$background-default: #0b0f17;
+$background-paper: #131a26;
+$primary-main: #2dd4bf;
+$primary-dark: #14b8a6;
+$primary-light: #5eead4;
+$primary-contrastText: #06201d;
+$secondary-main: #38bdf8;
+$secondary-contrastText: #06202b;
+$text-primary: #eef2f7;
+$text-secondary: rgba(238, 242, 247, 0.66);
+$surface: rgba(255, 255, 255, 0.045);
+
+/* Two soft glows at the top corners, so the page is not a flat black slab. */
+$background-image:
+    radial-gradient(1200px 620px at 8% -12%, rgba(45, 212, 191, 0.13), transparent 60%),
+    radial-gradient(900px 520px at 100% -4%, rgba(56, 189, 248, 0.11), transparent 55%);
+
+@use "../_base/theme" with (
+    $dark: true,
+    $rounded-person-cards: true,
+    $background-default: $background-default,
+    $background-defaultImage: $background-image,
+    $background-paper: $background-paper,
+    $primary-main: $primary-main,
+    $primary-dark: $primary-dark,
+    $primary-light: $primary-light,
+    $primary-hover: rgba(45, 212, 191, 0.16),
+    $primary-contrastText: $primary-contrastText,
+    $secondary-main: $secondary-main,
+    $secondary-contrastText: $secondary-contrastText,
+    $error-main: #f87171,
+    $error-dark: #dc2626,
+    $error-light: #fca5a5,
+    $error-contrastText: #2a0606,
+    $text-primary: $text-primary,
+    $text-secondary: $text-secondary,
+    $action-focus: rgba(45, 212, 191, 0.18),
+    $action-hover: rgba(255, 255, 255, 0.06),
+    $divider: rgba(255, 255, 255, 0.08),
+    $appBar-defaultBg: rgba(11, 15, 23, 0.74),
+    $appBar-transparentBg: rgba(5, 8, 14, 0.35),
+    $surface-overlay: $surface,
+    $filledInput-bg: rgba(255, 255, 255, 0.06),
+    $filledInput-borderColor: rgba(255, 255, 255, 0.12),
+    $card-borderRadius: 0.8em,
+    $alert-infoFilledBg: #0f3b4c,
+    $alert-infoFilledColor: #d8f3fc,
+    $button-inheritContainedBg: rgba(255, 255, 255, 0.08),
+    $button-inheritContainedHoverBg: rgba(255, 255, 255, 0.14),
+    $snackbarContent-bg: #1b2433,
+    $snackbarContent-color: #eef2f7
+);
+@use "../_base/siren-components" with (
+    $dark: true
+);
+
+/* Default card background colours (items without artwork) */
+.defaultCardBackground1 {
+    background-color: #0f3d46;
+}
+
+.defaultCardBackground2 {
+    background-color: #1d4b66;
+}
+
+.defaultCardBackground3 {
+    background-color: #0d5c57;
+}
+
+.defaultCardBackground4 {
+    background-color: #2c3e63;
+}
+
+.defaultCardBackground5 {
+    background-color: #5b3a2e;
+}
+
+/* The detail ribbon sits on the backdrop, so it gets the glass treatment too */
+.detailRibbon {
+    background: rgba(11, 15, 23, 0.78);
+
+    .layout-tv & {
+        background: none;
+    }
+}
+
+.appfooter {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .appfooter {
+        background: rgba(11, 15, 23, 0.78);
+        backdrop-filter: blur(18px) saturate(150%);
+    }
+}
+
+.drawer-open {
+    background-color: #0e131c;
+}
