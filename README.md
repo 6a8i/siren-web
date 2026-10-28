@@ -1,5 +1,5 @@
-<h1 align="center">Jellyfin Web</h1>
-<h3 align="center">Part of the <a href="https://jellyfin.org">Jellyfin Project</a></h3>
+<h1 align="center">Siren Web</h1>
+<h3 align="center">The web client of Siren, built on <a href="https://jellyfin.org">Jellyfin Web</a></h3>
 
 ---
 

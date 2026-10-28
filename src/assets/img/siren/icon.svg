@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Siren">
+  <defs>
+    <linearGradient id="siren-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="siren-wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#99f6e4"/>
+      <stop offset="1" stop-color="#7dd3fc"/>
+    </linearGradient>
+  </defs>
+  <!-- Sonar ring, open at the top right where the pulse sits -->
+  <path d="M 445.3 205.3 A 196 196 0 1 1 306.7 66.7" fill="none" stroke="url(#siren-ring)" stroke-width="30" stroke-linecap="round"/>
+  <!-- The wave: sea and signal in one line -->
+  <path d="M 118 256 C 141 196 187 196 210 256 S 279 316 302 256 S 371 196 394 256" fill="none" stroke="url(#siren-wave)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Pulse -->
+  <circle cx="394.6" cy="117.4" r="22" fill="#fb923c"/>
+</svg>

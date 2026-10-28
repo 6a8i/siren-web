@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 320" width="1120" height="320" role="img" aria-label="Siren">
+  <defs>
+    <linearGradient id="siren-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d9488"/>
+      <stop offset="1" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="siren-wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#14b8a6"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 0) scale(0.625)">
+    <path d="M 445.3 205.3 A 196 196 0 1 1 306.7 66.7" fill="none" stroke="url(#siren-ring)" stroke-width="30" stroke-linecap="round"/>
+    <path d="M 118 256 C 141 196 187 196 210 256 S 279 316 302 256 S 371 196 394 256" fill="none" stroke="url(#siren-wave)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="394.6" cy="117.4" r="22" fill="#f97316"/>
+  </g>
+  <g fill="none" stroke="#0b1220" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 490 100 C 478 70 390 70 390 112 C 390 152 490 150 490 206 C 490 250 395 250 385 218"/>
+    <path d="M 552 70 V 250"/>
+    <path d="M 612 250 V 70 H 684 A 45 45 0 0 1 684 160 H 612 M 672 160 L 724 250"/>
+    <path d="M 892 70 H 782 V 250 H 892 M 782 160 H 874"/>
+    <path d="M 952 250 V 70 L 1082 250 V 70"/>
+  </g>
+</svg>
