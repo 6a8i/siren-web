@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { isAxiosError } from 'axios';
 
 import { QUERY_KEY as USER_QUERY_KEY } from 'hooks/api/useUser';
 import { useApi } from 'hooks/useApi';
@@ -7,6 +8,7 @@ import type {
     CreateFamilyMemberRequest,
     CreateFamilyRequest,
     FamilyMemberPasswordRequest,
+    ImageUpload,
     UpdateFamilyMemberRequest,
     UpdateFamilyRequest
 } from 'types/family';
@@ -15,14 +17,22 @@ import {
     createFamily,
     createFamilyMember,
     deleteFamily,
+    deleteFamilyMemberImage,
+    deleteUserImage,
     linkFamilyMember,
     removeFamilyMember,
+    setFamilyMemberImage,
     setFamilyMemberPassword,
+    setUserImage,
+    unlockFamilyMember,
     updateFamily,
     updateFamilyMember
 } from 'utils/sdk/family-api';
 
 import { FAMILIES_QUERY_KEY } from './queryKeys';
+
+const HTTP_NOT_FOUND = 404;
+const HTTP_METHOD_NOT_ALLOWED = 405;
 
 /** Families and users are shown side by side, so a change to one refreshes both. */
 const invalidateFamilies = () => {
@@ -30,6 +40,11 @@ const invalidateFamilies = () => {
     void queryClient.invalidateQueries({ queryKey: [ USERS_QUERY_KEY ] });
     void queryClient.invalidateQueries({ queryKey: [ USER_QUERY_KEY ] });
 };
+
+/** The server has no such route: an older build without the member image endpoint. */
+const isMissingEndpoint = (err: unknown) => (
+    isAxiosError(err) && (err.response?.status === HTTP_NOT_FOUND || err.response?.status === HTTP_METHOD_NOT_ALLOWED)
+);
 
 export const useCreateFamily = () => {
     const { api } = useApi();
@@ -95,6 +110,18 @@ export const useUpdateFamilyMember = () => {
     });
 };
 
+/** Ends a profile's PIN lockout now. */
+export const useUnlockFamilyMember = () => {
+    const { api } = useApi();
+
+    return useMutation({
+        mutationFn: ({ familyId, userId }: { familyId: string, userId: string }) => (
+            unlockFamilyMember(api!, familyId, userId)
+        ),
+        onSuccess: invalidateFamilies
+    });
+};
+
 export const useSetFamilyMemberPassword = () => {
     const { api } = useApi();
 
@@ -113,6 +140,48 @@ export const useRemoveFamilyMember = () => {
         mutationFn: ({ familyId, userId, deleteUser }: { familyId: string, userId: string, deleteUser: boolean }) => (
             removeFamilyMember(api!, familyId, userId, deleteUser)
         ),
+        onSuccess: invalidateFamilies
+    });
+};
+
+interface MemberImageTarget {
+    familyId: string
+    userId: string
+    /**
+     * The image is the caller's own: when the server has no member image endpoint yet, Jellyfin's
+     * own `UserImage` route (which any user may use for themselves) takes over.
+     */
+    isSelf?: boolean
+}
+
+export const useSetFamilyMemberImage = () => {
+    const { api } = useApi();
+
+    return useMutation({
+        mutationFn: async ({ familyId, userId, isSelf, image }: MemberImageTarget & { image: ImageUpload }) => {
+            try {
+                await setFamilyMemberImage(api!, familyId, userId, image.data, image.contentType);
+            } catch (err) {
+                if (!isSelf || !isMissingEndpoint(err)) throw err;
+                await setUserImage(api!, userId, image.data, image.contentType);
+            }
+        },
+        onSuccess: invalidateFamilies
+    });
+};
+
+export const useDeleteFamilyMemberImage = () => {
+    const { api } = useApi();
+
+    return useMutation({
+        mutationFn: async ({ familyId, userId, isSelf }: MemberImageTarget) => {
+            try {
+                await deleteFamilyMemberImage(api!, familyId, userId);
+            } catch (err) {
+                if (!isSelf || !isMissingEndpoint(err)) throw err;
+                await deleteUserImage(api!, userId);
+            }
+        },
         onSuccess: invalidateFamilies
     });
 };

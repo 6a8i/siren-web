@@ -9,6 +9,7 @@ import TextField from '@mui/material/TextField';
 import React, { type FC, useCallback, useEffect, useState } from 'react';
 
 import globalize from 'lib/globalize';
+import datetime from 'scripts/datetime';
 
 import { useFocusOnOpen } from './useFocusOnOpen';
 import { useFullScreenDialog } from './useFullScreenDialog';
@@ -18,17 +19,27 @@ interface ProfilePinPromptProps {
     memberName?: string | null
     /** The profile was locked after too many wrong PINs; the message replaces the wrong-PIN one. */
     isLocked?: boolean
+    /** When the lockout ends, to say so in the message; an older server leaves it out. */
+    lockedUntil?: string | null
     isBusy?: boolean
     errorMessage?: string
     onClose: () => void
     onSubmit: (pin: string) => void
 }
 
+/** The locked message, with the time it unlocks when the server said so. */
+const getLockedMessage = (lockedUntil?: string | null) => (
+    lockedUntil ?
+        globalize.translate('ProfileLockedOutUntil', datetime.getDisplayTime(lockedUntil)) :
+        globalize.translate('ProfileLockedOut')
+);
+
 /** Asks for a profile's PIN before switching to it. */
 const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
     open,
     memberName,
     isLocked = false,
+    lockedUntil,
     isBusy = false,
     errorMessage,
     onClose,
@@ -69,7 +80,7 @@ const ProfilePinPrompt: FC<ProfilePinPromptProps> = ({
             <DialogContent>
                 <Stack spacing={2} sx={{ pt: 1 }}>
                     {isLocked ? (
-                        <Alert severity='warning'>{globalize.translate('ProfileLockedOut')}</Alert>
+                        <Alert severity='warning'>{getLockedMessage(lockedUntil)}</Alert>
                     ) : errorMessage && (
                         <Alert severity='error'>{errorMessage}</Alert>
                     )}

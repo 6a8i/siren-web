@@ -11,6 +11,7 @@ import type {
     CreateFamilyMemberRequest,
     CreateFamilyRequest,
     FamilyDto,
+    FamilyLibraryDto,
     FamilyMemberDto,
     FamilyMemberPasswordRequest,
     UpdateFamilyMemberRequest,
@@ -22,11 +23,18 @@ const withAuth = (api: Api, options?: AxiosRequestConfig): AxiosRequestConfig =>
     headers: { Authorization: api.authorizationHeader }
 });
 
+/** An image upload takes the convention of `POST /UserImage`: the body is the base64 payload, the content type the image's. */
+const withImage = (api: Api, contentType: string): AxiosRequestConfig => ({
+    headers: { Authorization: api.authorizationHeader, 'Content-Type': contentType }
+});
+
 const familiesUrl = (api: Api, path = '') => `${api.basePath}/Families${path}`;
 
 const memberUrl = (api: Api, familyId: string, userId: string, path = '') => (
     familiesUrl(api, `/${encodeURIComponent(familyId)}/Members/${encodeURIComponent(userId)}${path}`)
 );
+
+const userImageUrl = (api: Api, userId: string) => `${api.basePath}/UserImage?userId=${encodeURIComponent(userId)}`;
 
 export const getFamilies = (api: Api, options?: AxiosRequestConfig) => (
     api.axiosInstance.get<FamilyDto[]>(familiesUrl(api), withAuth(api, options))
@@ -38,6 +46,11 @@ export const getFamily = (api: Api, familyId: string, options?: AxiosRequestConf
 
 export const getMyFamily = (api: Api, options?: AxiosRequestConfig) => (
     api.axiosInstance.get<FamilyDto>(familiesUrl(api, '/Mine'), withAuth(api, options))
+);
+
+/** The libraries the family reaches, by name, including ones the caller cannot access. */
+export const getFamilyLibraries = (api: Api, familyId: string, options?: AxiosRequestConfig) => (
+    api.axiosInstance.get<FamilyLibraryDto[]>(familiesUrl(api, `/${encodeURIComponent(familyId)}/Libraries`), withAuth(api, options))
 );
 
 export const createFamily = (api: Api, body: CreateFamilyRequest) => (
@@ -72,6 +85,11 @@ export const updateFamilyMember = (api: Api, familyId: string, userId: string, b
     api.axiosInstance.post<void>(memberUrl(api, familyId, userId), body, withAuth(api))
 );
 
+/** Ends a PIN lockout before its time; the member update with `IsDisabled: false` does the same. */
+export const unlockFamilyMember = (api: Api, familyId: string, userId: string) => (
+    api.axiosInstance.post<void>(memberUrl(api, familyId, userId, '/Unlock'), undefined, withAuth(api))
+);
+
 export const setFamilyMemberPassword = (api: Api, familyId: string, userId: string, body: FamilyMemberPasswordRequest) => (
     api.axiosInstance.post<void>(memberUrl(api, familyId, userId, '/Password'), body, withAuth(api))
 );
@@ -82,4 +100,22 @@ export const removeFamilyMember = (api: Api, familyId: string, userId: string, d
 
 export const switchFamilyMember = (api: Api, familyId: string, userId: string, pw = '') => (
     api.axiosInstance.post<AuthenticationResult>(memberUrl(api, familyId, userId, '/Switch'), { Pw: pw }, withAuth(api))
+);
+
+/** Sets a member's profile image: server administrator, family administrator or the member themselves. */
+export const setFamilyMemberImage = (api: Api, familyId: string, userId: string, base64: string, contentType: string) => (
+    api.axiosInstance.post<void>(memberUrl(api, familyId, userId, '/Image'), base64, withImage(api, contentType))
+);
+
+export const deleteFamilyMemberImage = (api: Api, familyId: string, userId: string) => (
+    api.axiosInstance.delete<void>(memberUrl(api, familyId, userId, '/Image'), withAuth(api))
+);
+
+/** Jellyfin's own endpoint for one's own image: the fallback when the member image endpoint is not there. */
+export const setUserImage = (api: Api, userId: string, base64: string, contentType: string) => (
+    api.axiosInstance.post<void>(userImageUrl(api, userId), base64, withImage(api, contentType))
+);
+
+export const deleteUserImage = (api: Api, userId: string) => (
+    api.axiosInstance.delete<void>(userImageUrl(api, userId), withAuth(api))
 );

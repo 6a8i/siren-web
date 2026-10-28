@@ -33,11 +33,23 @@ export type SirenUserDto = UserDto & {
 export type FamilyMemberDto = SirenUserDto & {
     /** The profile asks for a PIN when switching to it. */
     HasPin: boolean
-    /** Disabled by the server after too many wrong PIN attempts; an administrator unlocks it. */
+    /**
+     * Locked for a while after too many wrong PIN attempts: true while `LockedOutUntil` is in the
+     * future. An administrator unlocks it sooner.
+     */
     IsLockedOut: boolean
+    /** When the lockout ends (ISO 8601, UTC); absent when the profile is not locked. */
+    LockedOutUntil?: string | null
     /** The profile reaches every library the family reaches. */
     HasAllFamilyFolders: boolean
 };
+
+/** A library the family reaches, by name, whether or not the caller can access it. */
+export interface FamilyLibraryDto {
+    Id: string
+    Name: string
+    CollectionType?: string | null
+}
 
 export const getFamilyId = (user?: UserDto | null): string | undefined => (
     (user as SirenUserDto | null | undefined)?.FamilyId || undefined
@@ -108,3 +120,9 @@ export const getFamilyLibraries = <T extends LibraryOption>(family: FamilyDto | 
     if (!family || family.EnableAllFolders) return libraries;
     return libraries.filter(library => !!library.Id && family.EnabledFolders.includes(library.Id));
 };
+
+/** An image for the member image endpoints: the base64 payload and its media type. */
+export interface ImageUpload {
+    contentType: string
+    data: string
+}

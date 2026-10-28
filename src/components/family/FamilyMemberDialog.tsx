@@ -1,5 +1,7 @@
 import type { ParentalRating } from '@jellyfin/sdk/lib/generated-client';
+import Face from '@mui/icons-material/Face';
 import Alert from '@mui/material/Alert';
+import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import Dialog from '@mui/material/Dialog';
@@ -49,6 +51,10 @@ interface FamilyMemberDialogProps {
     parentalRatings: ParentalRating[]
     /** Editing your own profile: you cannot disable or demote yourself. */
     isSelf?: boolean
+    /** The profile's current image, shown next to the avatar action when editing. */
+    imageUrl?: string
+    /** Opens the avatar picker (editing only); the picker stacks on top of this dialog. */
+    onAvatarClick?: () => void
     isSaving?: boolean
     errorMessage?: string
     onClose: () => void
@@ -56,6 +62,7 @@ interface FamilyMemberDialogProps {
 }
 
 const NO_LIMIT = '';
+const AVATAR_PREVIEW_SIZE = 56;
 
 /** The highest rating score still suitable for a child profile. */
 const CHILD_MAX_SCORE = 10;
@@ -134,6 +141,8 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
     libraries,
     parentalRatings,
     isSelf = false,
+    imageUrl,
+    onAvatarClick,
     isSaving = false,
     errorMessage,
     onClose,
@@ -217,6 +226,26 @@ const FamilyMemberDialog: FC<FamilyMemberDialogProps> = ({
                 <Stack spacing={2.5} sx={{ pt: 1 }}>
                     {errorMessage && (
                         <Alert severity='error'>{errorMessage}</Alert>
+                    )}
+
+                    {isEdit && onAvatarClick && (
+                        <Stack direction='row' spacing={2} alignItems='center'>
+                            <Avatar
+                                alt={member.Name ?? undefined}
+                                src={imageUrl}
+                                sx={{
+                                    width: AVATAR_PREVIEW_SIZE,
+                                    height: AVATAR_PREVIEW_SIZE,
+                                    borderRadius: '28%',
+                                    fontWeight: 600,
+                                    bgcolor: imageUrl ? 'background.paper' : 'primary.main',
+                                    color: 'primary.contrastText'
+                                }}
+                            />
+                            <Button variant='outlined' color='inherit' startIcon={<Face />} onClick={onAvatarClick}>
+                                {globalize.translate('ProfileAvatar')}
+                            </Button>
+                        </Stack>
                     )}
 
                     <TextField
