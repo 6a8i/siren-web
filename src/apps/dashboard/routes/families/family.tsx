@@ -23,48 +23,71 @@ import { useLibraryMediaFolders } from 'apps/dashboard/features/users/api/useLib
 import { useParentalRatings } from 'apps/dashboard/features/users/api/useParentalRatings';
 import confirm from 'components/confirm/confirm';
 import { getApiErrorMessage } from 'components/family/apiError';
+import AvatarPresetDialog from 'components/family/AvatarPresetDialog';
 import FamilyMemberDialog, { type FamilyMemberFormValues } from 'components/family/FamilyMemberDialog';
 import FamilyNameDialog, { type FamilyNameFormValues } from 'components/family/FamilyNameDialog';
 import FamilyPinDialog from 'components/family/FamilyPinDialog';
+import { useLockoutClock } from 'components/family/useLockoutClock';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
 import { useFamily } from 'hooks/api/family/useFamily';
+import { useFamilyLibraries } from 'hooks/api/family/useFamilyLibraries';
 import { useFamilyMembers } from 'hooks/api/family/useFamilyMembers';
 import {
     useCreateFamilyMember,
     useDeleteFamily,
+    useDeleteFamilyMemberImage,
     useLinkFamilyMember,
     useRemoveFamilyMember,
+    useSetFamilyMemberImage,
     useSetFamilyMemberPassword,
+    useUnlockFamilyMember,
     useUpdateFamily,
     useUpdateFamilyMember
 } from 'hooks/api/family/useFamilyMutations';
+import { useApi } from 'hooks/useApi';
 import { useUsers } from 'hooks/useUsers';
 import globalize from 'lib/globalize';
-import { type FamilyMemberDto, getFamilyId, getFamilyLibraries, toUpdateFamilyMemberRequest } from 'types/family';
+import { type FamilyMemberDto, getFamilyId, toUpdateFamilyMemberRequest } from 'types/family';
+import { type AvatarPreset, renderAvatarUpload } from 'utils/avatarPreset';
+import { getUserImageUrl } from 'utils/userImage';
 
 type DialogName = 'add' | 'link' | 'rename' | 'delete';
+
+const DIALOG_AVATAR_WIDTH = 160;
 
 export const Component = () => {
     const navigate = useNavigate();
     const { familyId } = useParams();
+    const { api } = useApi();
     const { data: family, isPending, isError } = useFamily(familyId);
-    const { data: members = [] } = useFamilyMembers(familyId);
+    const { data: members = [], refetch: refetchMembers } = useFamilyMembers(familyId);
     const { data: users } = useUsers();
     const { data: mediaFolders } = useLibraryMediaFolders({ isHidden: false });
+    // The server's own list of what the family reaches, so the dialog and the card never disagree.
+    const { data: familyLibraries = [] } = useFamilyLibraries(familyId);
     const { data: parentalRatings } = useParentalRatings();
 
     const createMember = useCreateFamilyMember();
     const linkMember = useLinkFamilyMember();
     const updateMember = useUpdateFamilyMember();
+    const unlockMember = useUnlockFamilyMember();
     const setPassword = useSetFamilyMemberPassword();
+    const setImage = useSetFamilyMemberImage();
+    const deleteImage = useDeleteFamilyMemberImage();
     const removeMember = useRemoveFamilyMember();
     const updateFamily = useUpdateFamily();
     const deleteFamily = useDeleteFamily();
 
+    const onLockoutExpire = useCallback(() => {
+        void refetchMembers();
+    }, [ refetchMembers ]);
+    const now = useLockoutClock(members, onLockoutExpire);
+
     const [ dialog, setDialog ] = useState<DialogName>();
     const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
     const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
+    const [ avatarTarget, setAvatarTarget ] = useState<FamilyMemberDto>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
     const [ toastMessage, setToastMessage ] = useState<string>();
 
@@ -73,25 +96,39 @@ export const Component = () => {
     ), [ users ]);
 
     const allLibraries = mediaFolders?.Items;
-    // A profile can only be granted libraries the family reaches.
-    const familyLibraries = useMemo(() => getFamilyLibraries(family, allLibraries ?? []), [ allLibraries, family ]);
     const isFull = !family || members.length >= family.MaxMembers;
-    const isSaving = createMember.isPending || linkMember.isPending || updateMember.isPending
-        || setPassword.isPending || removeMember.isPending || updateFamily.isPending || deleteFamily.isPending;
+    const isSaving = createMember.isPending || linkMember.isPending || updateMember.isPending || unlockMember.isPending
+        || setPassword.isPending || setImage.isPending || deleteImage.isPending || removeMember.isPending
+        || updateFamily.isPending || deleteFamily.isPending;
+
+    /** The fresh copy of a member picked earlier, so an image that changes shows at once. */
+    const findFresh = useCallback((member?: FamilyMemberDto) => (
+        member && (members.find(candidate => candidate.Id === member.Id) ?? member)
+    ), [ members ]);
+
+    const editMember = findFresh(editTarget);
+    const avatarMember = findFresh(avatarTarget);
 
     const closeDialogs = useCallback(() => {
         setDialog(undefined);
         setEditTarget(undefined);
         setPinTarget(undefined);
+        setAvatarTarget(undefined);
+        setErrorMessage(undefined);
+    }, []);
+
+    /** Closes the avatar picker only: the edit dialog it may have opened from stays. */
+    const closeAvatarDialog = useCallback(() => {
+        setAvatarTarget(undefined);
         setErrorMessage(undefined);
     }, []);
 
     /** Runs one change; a failure stays visible in whatever dialog is open, or on the page. */
-    const run = useCallback((action: () => Promise<unknown>, successMessage?: string) => {
+    const run = useCallback((action: () => Promise<unknown>, successMessage?: string, onDone: () => void = closeDialogs) => {
         void (async () => {
             try {
                 await action();
-                closeDialogs();
+                onDone();
                 if (successMessage) setToastMessage(successMessage);
             } catch (err) {
                 setErrorMessage(getApiErrorMessage(err, globalize.translate('ErrorDefault')));
@@ -188,6 +225,16 @@ export const Component = () => {
         setPinTarget(member);
     }, []);
 
+    const onAvatar = useCallback((member: FamilyMemberDto) => {
+        setErrorMessage(undefined);
+        setAvatarTarget(member);
+    }, []);
+
+    /** From the edit dialog: the picker opens on top of it, and the edit form keeps its changes. */
+    const onEditAvatarClick = useCallback(() => {
+        if (editTarget) onAvatar(editTarget);
+    }, [ editTarget, onAvatar ]);
+
     const onPinSubmit = useCallback((pin: string | null) => {
         if (!familyId || !pinTarget?.Id) return;
         run(() => setPassword.mutateAsync({
@@ -197,17 +244,25 @@ export const Component = () => {
         }), globalize.translate('SettingsSaved'));
     }, [ familyId, pinTarget, run, setPassword ]);
 
+    const onAvatarSave = useCallback((preset: AvatarPreset) => {
+        if (!familyId || !avatarTarget?.Id) return;
+        const userId = avatarTarget.Id;
+        run(async () => {
+            const image = renderAvatarUpload(preset);
+            await setImage.mutateAsync({ familyId, userId, image });
+        }, globalize.translate('AvatarSaved'), closeAvatarDialog);
+    }, [ avatarTarget, closeAvatarDialog, familyId, run, setImage ]);
+
+    const onAvatarRemove = useCallback(() => {
+        if (!familyId || !avatarTarget?.Id) return;
+        const userId = avatarTarget.Id;
+        run(() => deleteImage.mutateAsync({ familyId, userId }), globalize.translate('AvatarRemoved'), closeAvatarDialog);
+    }, [ avatarTarget, closeAvatarDialog, deleteImage, familyId, run ]);
+
     const onUnlock = useCallback((member: FamilyMemberDto) => {
         if (!familyId || !member.Id) return;
-        run(() => updateMember.mutateAsync({
-            familyId,
-            userId: member.Id!,
-            body: {
-                ...toUpdateFamilyMemberRequest(member),
-                IsDisabled: false
-            }
-        }), globalize.translate('ProfileUnlocked'));
-    }, [ familyId, run, updateMember ]);
+        run(() => unlockMember.mutateAsync({ familyId, userId: member.Id! }), globalize.translate('ProfileUnlocked'));
+    }, [ familyId, run, unlockMember ]);
 
     const onToggleFamilyAdmin = useCallback((member: FamilyMemberDto) => {
         if (!familyId || !member.Id) return;
@@ -300,14 +355,16 @@ export const Component = () => {
                             <Alert severity='info'>{globalize.translate('FamilyFull', family.MaxMembers)}</Alert>
                         )}
 
-                        {errorMessage && !dialog && !editTarget && !pinTarget && (
+                        {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && (
                             <Alert severity='error' onClose={closeDialogs}>{errorMessage}</Alert>
                         )}
 
                         <FamilyMembersList
                             members={members}
+                            now={now}
                             onEdit={onEdit}
                             onSetPin={onSetPin}
+                            onAvatar={onAvatar}
                             onUnlock={onUnlock}
                             onToggleFamilyAdmin={onToggleFamilyAdmin}
                             onUnlink={onUnlink}
@@ -352,8 +409,10 @@ export const Component = () => {
                 member={editTarget}
                 libraries={familyLibraries}
                 parentalRatings={parentalRatings ?? []}
+                imageUrl={getUserImageUrl(api, editMember?.Id, editMember?.PrimaryImageTag, DIALOG_AVATAR_WIDTH)}
+                onAvatarClick={onEditAvatarClick}
                 isSaving={isSaving}
-                errorMessage={errorMessage}
+                errorMessage={avatarTarget ? undefined : errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onEditSubmit}
             />
@@ -390,6 +449,16 @@ export const Component = () => {
                 errorMessage={errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onPinSubmit}
+            />
+            <AvatarPresetDialog
+                open={!!avatarTarget}
+                memberName={avatarTarget?.Name}
+                hasImage={!!avatarMember?.PrimaryImageTag}
+                isSaving={isSaving}
+                errorMessage={errorMessage}
+                onClose={closeAvatarDialog}
+                onSave={onAvatarSave}
+                onRemove={onAvatarRemove}
             />
             <Toast
                 open={!!toastMessage}

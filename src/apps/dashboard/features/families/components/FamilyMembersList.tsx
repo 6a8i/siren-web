@@ -2,6 +2,7 @@ import CheckBox from '@mui/icons-material/CheckBox';
 import CheckBoxOutlineBlank from '@mui/icons-material/CheckBoxOutlineBlank';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import Edit from '@mui/icons-material/Edit';
+import Face from '@mui/icons-material/Face';
 import Key from '@mui/icons-material/Key';
 import LinkOff from '@mui/icons-material/LinkOff';
 import LockOpen from '@mui/icons-material/LockOpen';
@@ -24,14 +25,17 @@ import { formatDistanceToNow } from 'date-fns';
 import React, { type FC, useCallback, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import LockedChip from 'components/family/LockedChip';
 import UserAvatar from 'components/UserAvatar';
 import globalize from 'lib/globalize';
 import type { FamilyMemberDto } from 'types/family';
 import { getLocaleWithSuffix } from 'utils/dateFnsLocale';
+import { isMemberLockedOut } from 'utils/lockout';
 
 interface MemberActions {
     onEdit: (member: FamilyMemberDto) => void
     onSetPin: (member: FamilyMemberDto) => void
+    onAvatar: (member: FamilyMemberDto) => void
     onUnlock: (member: FamilyMemberDto) => void
     onToggleFamilyAdmin: (member: FamilyMemberDto) => void
     onUnlink: (member: FamilyMemberDto) => void
@@ -40,10 +44,13 @@ interface MemberActions {
 
 interface FamilyMembersListProps extends MemberActions {
     members: FamilyMemberDto[]
+    /** The moment the lockout chips count from (see useLockoutClock). */
+    now: number
 }
 
 interface FamilyMemberRowProps extends MemberActions {
     member: FamilyMemberDto
+    now: number
 }
 
 const getLastSeen = (lastActivityDate?: string | null) => (
@@ -54,8 +61,10 @@ const getLastSeen = (lastActivityDate?: string | null) => (
 
 const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
     member,
+    now,
     onEdit,
     onSetPin,
+    onAvatar,
     onUnlock,
     onToggleFamilyAdmin,
     onUnlink,
@@ -64,7 +73,7 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
     const [ anchorEl, setAnchorEl ] = useState<HTMLElement | null>(null);
     const isFamilyAdmin = !!member.Policy?.IsFamilyAdministrator;
     const hasPin = member.HasPin;
-    const isLocked = member.IsLockedOut;
+    const isLocked = isMemberLockedOut(member, now);
     const lastSeen = getLastSeen(member.LastActivityDate);
     const userPageUrl = `/dashboard/users/${member.Id}/profile`;
 
@@ -85,6 +94,11 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
         setAnchorEl(null);
         onSetPin(member);
     }, [ member, onSetPin ]);
+
+    const onAvatarClick = useCallback(() => {
+        setAnchorEl(null);
+        onAvatar(member);
+    }, [ member, onAvatar ]);
 
     const onUnlockClick = useCallback(() => {
         setAnchorEl(null);
@@ -132,7 +146,7 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                             <Chip size='small' label={globalize.translate('Disabled')} />
                         )}
                         {isLocked && (
-                            <Chip size='small' color='warning' label={globalize.translate('ProfileLocked')} />
+                            <LockedChip member={member} now={now} />
                         )}
                     </Stack>
                 )}
@@ -153,6 +167,10 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
                 <MenuItem onClick={onPinClick}>
                     <ListItemIcon><Key fontSize='small' /></ListItemIcon>
                     <ListItemText>{globalize.translate(hasPin ? 'ChangePin' : 'SetPin')}</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={onAvatarClick}>
+                    <ListItemIcon><Face fontSize='small' /></ListItemIcon>
+                    <ListItemText>{globalize.translate('ProfileAvatar')}</ListItemText>
                 </MenuItem>
                 {isLocked && (
                     <MenuItem onClick={onUnlockClick}>
@@ -185,12 +203,12 @@ const FamilyMemberRow: FC<FamilyMemberRowProps> = ({
 };
 
 /** The profiles of one family with a per-row action menu. */
-const FamilyMembersList: FC<FamilyMembersListProps> = ({ members, ...actions }) => (
+const FamilyMembersList: FC<FamilyMembersListProps> = ({ members, now, ...actions }) => (
     <Paper variant='outlined' sx={{ borderRadius: 3, overflow: 'hidden', bgcolor: 'background.paper' }}>
         {members.length > 0 ? (
             <List disablePadding>
                 {members.map(member => (
-                    <FamilyMemberRow key={member.Id} member={member} {...actions} />
+                    <FamilyMemberRow key={member.Id} member={member} now={now} {...actions} />
                 ))}
             </List>
         ) : (

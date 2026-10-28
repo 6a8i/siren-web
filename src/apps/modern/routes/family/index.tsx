@@ -10,33 +10,45 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useParentalRatings } from 'apps/dashboard/features/users/api/useParentalRatings';
+import FamilySessions from 'apps/modern/features/family/components/FamilySessions';
 import ProfileGrid from 'apps/modern/features/family/components/ProfileGrid';
 import confirm from 'components/confirm/confirm';
 import { getApiErrorMessage } from 'components/family/apiError';
+import AvatarPresetDialog from 'components/family/AvatarPresetDialog';
 import FamilyMemberDialog, { type FamilyMemberFormValues } from 'components/family/FamilyMemberDialog';
 import FamilyNameDialog, { type FamilyNameFormValues } from 'components/family/FamilyNameDialog';
 import FamilyPinDialog from 'components/family/FamilyPinDialog';
 import ProfilePinPrompt from 'components/family/ProfilePinPrompt';
+import { useLockoutClock } from 'components/family/useLockoutClock';
 import loading from 'components/loading/loading';
 import Loading from 'components/loading/LoadingComponent';
 import Page from 'components/Page';
+import { useFamilyLibraries } from 'hooks/api/family/useFamilyLibraries';
 import { useFamilyMembers } from 'hooks/api/family/useFamilyMembers';
 import {
     useCreateFamilyMember,
+    useDeleteFamilyMemberImage,
     useRemoveFamilyMember,
+    useSetFamilyMemberImage,
     useSetFamilyMemberPassword,
+    useUnlockFamilyMember,
     useUpdateFamily,
     useUpdateFamilyMember
 } from 'hooks/api/family/useFamilyMutations';
+import { useFamilySessions } from 'hooks/api/family/useFamilySessions';
 import { useMyFamily } from 'hooks/api/family/useMyFamily';
-import { useUserViews } from 'hooks/api/useUserViews';
 import { useApi } from 'hooks/useApi';
 import globalize from 'lib/globalize';
-import { type FamilyMemberDto, getFamilyLibraries, isFamilyAdministrator, toUpdateFamilyMemberRequest } from 'types/family';
+import { type FamilyMemberDto, isFamilyAdministrator, toUpdateFamilyMemberRequest } from 'types/family';
+import { type AvatarPreset, renderAvatarUpload } from 'utils/avatarPreset';
 import { ProfileSwitchError, switchFamilyProfile } from 'utils/familySwitch';
+import { isMemberLockedOut } from 'utils/lockout';
 import { getLastProfileId, markProfileChosen } from 'utils/profileSelection';
+import { getUserImageUrl } from 'utils/userImage';
 
 type DialogName = 'add' | 'rename';
+
+const DIALOG_AVATAR_WIDTH = 160;
 
 /**
  * "Who's watching?": the profiles of the current user's family. Any member switches between them;
@@ -45,38 +57,59 @@ type DialogName = 'add' | 'rename';
 const FamilyPage = () => {
     const navigate = useNavigate();
     const [ searchParams, setSearchParams ] = useSearchParams();
-    const { user: currentUser, __legacyApiClient__: apiClient } = useApi();
+    const { api, user: currentUser, __legacyApiClient__: apiClient } = useApi();
     const { data: family, isPending, isError } = useMyFamily();
     const { data: members = [], isPending: isMembersPending, refetch: refetchMembers } = useFamilyMembers(family?.Id);
     const { data: parentalRatings } = useParentalRatings();
-    // Family administrators have no dashboard: the libraries they can name are the ones they see themselves.
-    const { data: views } = useUserViews();
+
+    const isAdmin = isFamilyAdministrator(currentUser);
+    const manage = isAdmin && searchParams.get('manage') === '1';
+
+    // Every library the family reaches, by name: a family administrator may grant ones they cannot see.
+    const { data: libraries = [] } = useFamilyLibraries(isAdmin ? family?.Id : undefined);
+    const sessions = useFamilySessions(manage && !!family);
 
     const createMember = useCreateFamilyMember();
     const updateMember = useUpdateFamilyMember();
+    const unlockMember = useUnlockFamilyMember();
     const setPassword = useSetFamilyMemberPassword();
+    const setImage = useSetFamilyMemberImage();
+    const deleteImage = useDeleteFamilyMemberImage();
     const removeMember = useRemoveFamilyMember();
     const updateFamily = useUpdateFamily();
 
     const serverId = apiClient?.serverId() ?? currentUser?.ServerId ?? undefined;
     const lastProfileId = useMemo(() => (serverId ? getLastProfileId(serverId) : undefined), [ serverId ]);
-    const ownViews = views?.Items;
-    const libraries = useMemo(() => getFamilyLibraries(family, ownViews ?? []), [ family, ownViews ]);
-    const isAdmin = isFamilyAdministrator(currentUser);
-    const manage = isAdmin && searchParams.get('manage') === '1';
+
+    // Lockouts count down on the tiles and end on their own; the refetch then confirms with the server.
+    const onLockoutExpire = useCallback(() => {
+        void refetchMembers();
+    }, [ refetchMembers ]);
+    const now = useLockoutClock(members, onLockoutExpire);
 
     const [ dialog, setDialog ] = useState<DialogName>();
     const [ editTarget, setEditTarget ] = useState<FamilyMemberDto>();
     const [ pinTarget, setPinTarget ] = useState<FamilyMemberDto>();
+    const [ avatarTarget, setAvatarTarget ] = useState<FamilyMemberDto>();
     const [ switchTarget, setSwitchTarget ] = useState<FamilyMemberDto>();
     const [ isSwitching, setIsSwitching ] = useState(false);
-    const [ isSwitchLocked, setIsSwitchLocked ] = useState(false);
     const [ switchError, setSwitchError ] = useState<string>();
     const [ errorMessage, setErrorMessage ] = useState<string>();
 
-    const isSaving = createMember.isPending || updateMember.isPending || setPassword.isPending
+    const isSaving = createMember.isPending || updateMember.isPending || unlockMember.isPending
+        || setPassword.isPending || setImage.isPending || deleteImage.isPending
         || removeMember.isPending || updateFamily.isPending;
     const isFull = !family || members.length >= family.MaxMembers;
+
+    /** The fresh copy of a member picked earlier, so a lockout that ends or an image that changes shows at once. */
+    const findFresh = useCallback((member?: FamilyMemberDto) => (
+        member && (members.find(candidate => candidate.Id === member.Id) ?? member)
+    ), [ members ]);
+
+    const switchMember = findFresh(switchTarget);
+    const isSwitchLocked = !!switchMember && isMemberLockedOut(switchMember, now);
+    const editMember = findFresh(editTarget);
+    const avatarMember = findFresh(avatarTarget);
 
     const setManage = useCallback((value: boolean) => {
         setSearchParams(value ? { manage: '1' } : {}, { replace: true });
@@ -94,17 +127,17 @@ const FamilyPage = () => {
         setDialog(undefined);
         setEditTarget(undefined);
         setPinTarget(undefined);
+        setAvatarTarget(undefined);
         setSwitchTarget(undefined);
-        setIsSwitchLocked(false);
         setSwitchError(undefined);
         setErrorMessage(undefined);
     }, []);
 
-    const run = useCallback((action: () => Promise<unknown>) => {
+    const run = useCallback((action: () => Promise<unknown>, onDone: () => void = closeDialogs) => {
         void (async () => {
             try {
                 await action();
-                closeDialogs();
+                onDone();
             } catch (err) {
                 setErrorMessage(getApiErrorMessage(err, globalize.translate('ErrorDefault')));
             }
@@ -115,13 +148,12 @@ const FamilyPage = () => {
 
     /**
      * The fifth wrong PIN answers 401 and locks the profile, a locked or disabled profile answers 403
-     * before the PIN is checked; the refreshed member list says which it is.
+     * before the PIN is checked; the refreshed member list says which it is (a lockout shows on its own).
      */
     const reportWrongPin = useCallback(async (member: FamilyMemberDto, refused: boolean) => {
         const { data } = await refetchMembers();
         const fresh = data?.find(candidate => candidate.Id === member.Id);
-        if (fresh?.IsLockedOut) {
-            setIsSwitchLocked(true);
+        if (fresh && isMemberLockedOut(fresh)) {
             setSwitchError(undefined);
         } else if (refused) {
             setSwitchError(globalize.translate('ProfileDisabledMessage'));
@@ -160,18 +192,14 @@ const FamilyPage = () => {
             return;
         }
 
-        if (member.IsLockedOut) {
+        if (isMemberLockedOut(member, now) || member.HasPin) {
+            // The prompt explains the lockout (and counts it down) or asks for the PIN.
             setSwitchError(undefined);
-            setIsSwitchLocked(true);
-            setSwitchTarget(member);
-        } else if (member.HasPin) {
-            setSwitchError(undefined);
-            setIsSwitchLocked(false);
             setSwitchTarget(member);
         } else {
             startSwitch(member, '');
         }
-    }, [ currentUser?.Id, navigate, serverId, startSwitch ]);
+    }, [ currentUser?.Id, navigate, now, serverId, startSwitch ]);
 
     const onPinPromptSubmit = useCallback((pin: string) => {
         if (switchTarget) startSwitch(switchTarget, pin);
@@ -198,6 +226,16 @@ const FamilyPage = () => {
         setErrorMessage(undefined);
         setPinTarget(member);
     }, []);
+
+    const onAvatar = useCallback((member: FamilyMemberDto) => {
+        setErrorMessage(undefined);
+        setAvatarTarget(member);
+    }, []);
+
+    /** From the edit dialog: the picker opens on top of it, and the edit form keeps its changes. */
+    const onEditAvatarClick = useCallback(() => {
+        if (editTarget) onAvatar(editTarget);
+    }, [ editTarget, onAvatar ]);
 
     const onAddSubmit = useCallback((values: FamilyMemberFormValues) => {
         if (!family) return;
@@ -233,15 +271,8 @@ const FamilyPage = () => {
 
     const onUnlock = useCallback((member: FamilyMemberDto) => {
         if (!family || !member.Id) return;
-        run(() => updateMember.mutateAsync({
-            familyId: family.Id,
-            userId: member.Id!,
-            body: {
-                ...toUpdateFamilyMemberRequest(member),
-                IsDisabled: false
-            }
-        }));
-    }, [ family, run, updateMember ]);
+        run(() => unlockMember.mutateAsync({ familyId: family.Id, userId: member.Id! }));
+    }, [ family, run, unlockMember ]);
 
     const onPinSubmit = useCallback((pin: string | null) => {
         if (!family || !pinTarget?.Id) return;
@@ -251,6 +282,27 @@ const FamilyPage = () => {
             body: pin === null ? { ResetPassword: true } : { NewPassword: pin }
         }));
     }, [ family, pinTarget, run, setPassword ]);
+
+    /** Closes the avatar picker only: the edit dialog it may have opened from stays. */
+    const closeAvatarDialog = useCallback(() => {
+        setAvatarTarget(undefined);
+        setErrorMessage(undefined);
+    }, []);
+
+    const onAvatarSave = useCallback((preset: AvatarPreset) => {
+        if (!family || !avatarTarget?.Id) return;
+        const userId = avatarTarget.Id;
+        run(async () => {
+            const image = renderAvatarUpload(preset);
+            await setImage.mutateAsync({ familyId: family.Id, userId, isSelf: userId === currentUser?.Id, image });
+        }, closeAvatarDialog);
+    }, [ avatarTarget, closeAvatarDialog, currentUser?.Id, family, run, setImage ]);
+
+    const onAvatarRemove = useCallback(() => {
+        if (!family || !avatarTarget?.Id) return;
+        const userId = avatarTarget.Id;
+        run(() => deleteImage.mutateAsync({ familyId: family.Id, userId, isSelf: userId === currentUser?.Id }), closeAvatarDialog);
+    }, [ avatarTarget, closeAvatarDialog, currentUser?.Id, deleteImage, family, run ]);
 
     const onRenameSubmit = useCallback(({ Name }: FamilyNameFormValues) => {
         if (!family) return;
@@ -319,7 +371,7 @@ const FamilyPage = () => {
                                 </Stack>
                             </Box>
 
-                            {errorMessage && !dialog && !editTarget && !pinTarget && !switchTarget && (
+                            {errorMessage && !dialog && !editTarget && !pinTarget && !avatarTarget && !switchTarget && (
                                 <Alert severity='error' onClose={closeDialogs} sx={{ width: '100%' }}>{errorMessage}</Alert>
                             )}
 
@@ -327,12 +379,14 @@ const FamilyPage = () => {
                                 members={members}
                                 currentUserId={currentUser?.Id}
                                 lastProfileId={lastProfileId}
+                                now={now}
                                 manage={manage}
                                 canAdd={!isFull}
                                 onAdd={onAddClick}
                                 onSelect={onSelect}
                                 onEdit={onEdit}
                                 onSetPin={onSetPin}
+                                onAvatar={onAvatar}
                                 onUnlock={onUnlock}
                                 onRemove={onRemove}
                             />
@@ -341,6 +395,15 @@ const FamilyPage = () => {
                                 <Typography variant='body2' color='text.secondary'>
                                     {globalize.translate('FamilyFull', family.MaxMembers)}
                                 </Typography>
+                            )}
+
+                            {manage && (
+                                <FamilySessions
+                                    sessions={sessions.data}
+                                    currentUserId={currentUser?.Id}
+                                    isPending={sessions.isPending}
+                                    isError={sessions.isError}
+                                />
                             )}
 
                             {isAdmin && (
@@ -363,6 +426,7 @@ const FamilyPage = () => {
                 open={!!switchTarget}
                 memberName={switchTarget?.Name}
                 isLocked={isSwitchLocked}
+                lockedUntil={switchMember?.LockedOutUntil}
                 isBusy={isSwitching}
                 errorMessage={switchError}
                 onClose={closeDialogs}
@@ -385,8 +449,10 @@ const FamilyPage = () => {
                 libraries={libraries}
                 parentalRatings={parentalRatings ?? []}
                 isSelf={!!editTarget && editTarget.Id === currentUser?.Id}
+                imageUrl={getUserImageUrl(api, editMember?.Id, editMember?.PrimaryImageTag, DIALOG_AVATAR_WIDTH)}
+                onAvatarClick={onEditAvatarClick}
                 isSaving={isSaving}
-                errorMessage={errorMessage}
+                errorMessage={avatarTarget ? undefined : errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onEditSubmit}
             />
@@ -398,6 +464,16 @@ const FamilyPage = () => {
                 errorMessage={errorMessage}
                 onClose={closeDialogs}
                 onSubmit={onPinSubmit}
+            />
+            <AvatarPresetDialog
+                open={!!avatarTarget}
+                memberName={avatarTarget?.Name}
+                hasImage={!!avatarMember?.PrimaryImageTag}
+                isSaving={isSaving}
+                errorMessage={errorMessage}
+                onClose={closeAvatarDialog}
+                onSave={onAvatarSave}
+                onRemove={onAvatarRemove}
             />
             <FamilyNameDialog
                 open={dialog === 'rename'}

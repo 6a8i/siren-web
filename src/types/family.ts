@@ -115,12 +115,6 @@ export interface LibraryOption {
     Name?: string | null
 }
 
-/** The libraries the family reaches, out of a wider list. */
-export const getFamilyLibraries = <T extends LibraryOption>(family: FamilyDto | undefined, libraries: T[]): T[] => {
-    if (!family || family.EnableAllFolders) return libraries;
-    return libraries.filter(library => !!library.Id && family.EnabledFolders.includes(library.Id));
-};
-
 /** An image for the member image endpoints: the base64 payload and its media type. */
 export interface ImageUpload {
     contentType: string
