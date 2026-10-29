@@ -250,11 +250,6 @@ export default tseslint.config(
             },
             polyfills: [
                 'Promise',
-                // whatwg-fetch
-                'fetch',
-                'Response',
-                'Response.headers',
-                'Response.json',
                 // document-register-element
                 'document.registerElement',
                 // MDN lists document.body as a partial implementation before Firefox 60 (HTMLDocument only),

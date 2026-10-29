@@ -98,12 +98,10 @@
     "abortcontroller-polyfill": "1.7.8",
     "axios": "1.18.1",
     "blurhash": "2.0.5",
-    "classlist.js": "https://github.com/eligrey/classList.js/archive/1.2.20180112.tar.gz",
     "classnames": "2.5.1",
     "core-js": "3.49.0",
     "date-fns": "2.30.0",
     "dompurify": "2.5.9",
-    "element-closest-polyfill": "1.0.7",
     "epubjs": "0.3.93",
     "escape-html": "1.0.3",
     "fast-text-encoding": "1.0.6",
@@ -124,7 +122,6 @@
     "material-react-table": "3.2.1",
     "native-promise-only": "0.8.1",
     "pdfjs-dist": "3.11.174",
-    "proxy-polyfill": "0.3.2",
     "react": "18.3.1",
     "react-blurhash": "0.3.0",
     "react-dom": "18.3.1",
@@ -135,8 +132,7 @@
     "sortablejs": "1.15.7",
     "swiper": "12.2.0",
     "usehooks-ts": "3.1.1",
-    "webcomponents.js": "0.7.24",
-    "whatwg-fetch": "3.6.20"
+    "webcomponents.js": "0.7.24"
   },
   "optionalDependencies": {
     "sass-embedded": "1.100.0"

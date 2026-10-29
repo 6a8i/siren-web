@@ -13,8 +13,6 @@ import 'jquery';
 import 'fast-text-encoding';
 // IntersectionObserver: Firefox 55, Safari 12.1 (iOS 12.2), Chrome 58, Edge 16, Opera 45, Samsung 7.2.
 import 'intersection-observer';
-// DOMTokenList.replace() (components/slideshow): Chrome 61, Edge 17, Opera 48, Samsung 8.
-import 'classlist.js';
 // AbortController and the signal on fetch: Chrome 66, Firefox 57, Safari 12.1 (iOS 12.2), Edge 16,
 // Opera 53, Samsung 9.2. Patches the native fetch, which every target has (Safari 10.1, Edge 14).
 import 'abortcontroller-polyfill';

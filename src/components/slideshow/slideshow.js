@@ -285,7 +285,8 @@ export default function (options) {
     function onAutoplayStart() {
         const btnSlideshowPause = dialog.querySelector('.btnSlideshowPause .material-icons');
         if (btnSlideshowPause) {
-            btnSlideshowPause.classList.replace('play_arrow', 'pause');
+            btnSlideshowPause.classList.remove('play_arrow');
+            btnSlideshowPause.classList.add('pause');
         }
     }
 
@@ -295,7 +296,8 @@ export default function (options) {
     function onAutoplayStop() {
         const btnSlideshowPause = dialog.querySelector('.btnSlideshowPause .material-icons');
         if (btnSlideshowPause) {
-            btnSlideshowPause.classList.replace('pause', 'play_arrow');
+            btnSlideshowPause.classList.remove('pause');
+            btnSlideshowPause.classList.add('play_arrow');
         }
     }
 
