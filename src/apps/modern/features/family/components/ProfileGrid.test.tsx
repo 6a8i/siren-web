@@ -54,6 +54,7 @@ function renderGrid(props: Partial<React.ComponentProps<typeof ProfileGrid>> = {
                 onEdit={noop}
                 onSetPin={noop}
                 onAvatar={noop}
+                onHistory={noop}
                 onUnlock={noop}
                 onRemove={noop}
                 {...props}

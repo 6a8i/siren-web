@@ -53,6 +53,7 @@ function renderList(props: Partial<Props> = {}) {
                         onEdit={noop}
                         onSetPin={noop}
                         onAvatar={noop}
+                        onHistory={noop}
                         onUnlock={noop}
                         onToggleFamilyAdmin={noop}
                         onUnlink={noop}
@@ -116,6 +117,7 @@ describe('<FamilyMembersList />', () => {
             'EditFamilyProfile',
             'SetPin',
             'ProfileAvatar',
+            'WatchHistory',
             'FamilyAdministrator',
             'OpenFullUserPage',
             'UnlinkFromFamily',
