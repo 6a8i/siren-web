@@ -85,3 +85,30 @@ export async function createFamily(token: string): Promise<FamilyDto> {
 
     return family;
 }
+
+/** Adds a library over an (empty) folder; a scan of nothing is instant, and it makes the folder a media folder right away. */
+export async function createLibrary(token: string, name: string, folder: string): Promise<void> {
+    const query = `name=${encodeURIComponent(name)}&collectionType=movies&paths=${encodeURIComponent(folder)}&refreshLibrary=true`;
+    await request('POST', `/Library/VirtualFolders?${query}`, { LibraryOptions: { PathInfos: [ { Path: folder } ] } }, token);
+}
+
+interface AuthenticationInfo {
+    AccessToken: string
+    AppName: string
+    IsReadOnly?: boolean
+}
+
+/**
+ * Whether the server knows read-only API keys: creates one with the flag, reads it back and
+ * revokes it. An older server creates the key without the flag and answers without the field.
+ */
+export async function supportsReadOnlyKeys(token: string): Promise<boolean> {
+    const app = 'siren-e2e-probe';
+    await request('POST', `/Auth/Keys?app=${app}&isReadOnly=true`, undefined, token);
+    const keys = await request<{ Items: AuthenticationInfo[] }>('GET', '/Auth/Keys', undefined, token);
+    const probe = keys.Items.find(key => key.AppName === app);
+    if (probe) {
+        await request('DELETE', `/Auth/Keys/${probe.AccessToken}`, undefined, token);
+    }
+    return probe?.IsReadOnly === true;
+}

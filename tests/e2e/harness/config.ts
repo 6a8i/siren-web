@@ -39,3 +39,18 @@ export const ADMIN_STATE = path.join(REPO_ROOT, 'tests', 'e2e', '.auth', 'admin.
 /** Environment variables the global setup hands to the workers and the teardown. */
 export const ENV_SERVER_PID = 'SIREN_E2E_SERVER_PID';
 export const ENV_DATA_DIR = 'SIREN_E2E_DATA_DIR';
+
+/** The two libraries the global setup creates (empty folders), to restrict the family to one of them. */
+export const LIBRARIES = { kids: 'Kids', movies: 'Movies' };
+
+/**
+ * The server allows ten authentications a minute per address by default; the suite spends more
+ * than that on wrong PINs alone, so the harness starts the server with this limit in its
+ * system.xml. The networking spec reads it back from the page.
+ */
+export const AUTH_RATE_LIMIT = 100;
+
+/** The family's id, for the specs that open its dashboard page directly. */
+export const ENV_FAMILY_ID = 'SIREN_E2E_FAMILY_ID';
+/** "1" when the server lists IsReadOnly on API keys (the read-only key spec needs it). */
+export const ENV_READONLY_KEYS = 'SIREN_E2E_READONLY_KEYS';

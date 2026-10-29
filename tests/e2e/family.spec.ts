@@ -39,3 +39,51 @@ test('a wrong PIN shows "Incorrect PIN."', async ({ page }) => {
     await expect(prompt.getByRole('alert')).toHaveText('Incorrect PIN.');
     await expect(page).toHaveURL(/#\/family/);
 });
+
+test('the avatar preset dialog saves and the tile shows the image', async ({ page }) => {
+    // A successful login also resets the wrong-PIN count the previous test left on the administrator.
+    await login(page, FAMILY.admin.name, FAMILY.admin.pin);
+    await expect(page.getByRole('heading', { name: whoIsWatching })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Manage profiles' }).click();
+    await expect(page.getByRole('heading', { name: 'Manage profiles' })).toBeVisible();
+
+    const tile = page.getByRole('button', { name: FAMILY.child.name, exact: true });
+    await expect(tile.locator('img')).toHaveCount(0);
+    await tile.click();
+    await page.getByRole('menuitem', { name: 'Avatar' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Choose an avatar' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Save' }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(tile.locator('img')).toBeVisible();
+});
+
+/** Keep this one last: it locks the administrator profile for the rest of the run. */
+test('five wrong PINs lock the profile and the tile shows the locked chip', async ({ page }) => {
+    await login(page, FAMILY.child.name);
+    await expect(page.getByRole('heading', { name: whoIsWatching })).toBeVisible();
+
+    const tile = page.getByRole('button', { name: FAMILY.admin.name, exact: true });
+    await tile.click();
+
+    const prompt = page.getByRole('dialog');
+    const pinField = prompt.getByLabel('PIN', { exact: true });
+    const submit = prompt.getByRole('button', { name: 'Switch profile' });
+
+    for (let attempt = 1; attempt < 5; attempt++) {
+        await pinField.fill('0000');
+        await submit.click();
+        await expect(prompt.getByRole('alert')).toHaveText('Incorrect PIN.');
+    }
+
+    await pinField.fill('0000');
+    await submit.click();
+    await expect(prompt.getByRole('alert')).toContainText('locked after too many wrong PIN attempts');
+    await expect(submit).toBeDisabled();
+
+    await prompt.getByRole('button', { name: 'Cancel' }).click();
+    await expect(tile.getByText(/^Locked/)).toBeVisible();
+});

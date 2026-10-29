@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { BASE_URL, DIST_DIR, E2E_PORT, FFMPEG, SERVER_DLL } from './config';
+import { AUTH_RATE_LIMIT, BASE_URL, DIST_DIR, E2E_PORT, FFMPEG, SERVER_DLL } from './config';
 
 const READY_TIMEOUT_MS = 180_000;
 const READY_POLL_MS = 500;
@@ -34,6 +34,18 @@ const networkConfiguration = (port: number) => `<?xml version="1.0" encoding="ut
   <AutoDiscovery>false</AutoDiscovery>
   <EnableUPnP>false</EnableUPnP>
 </NetworkConfiguration>
+`;
+
+/**
+ * The system.xml the server reads on its first start, with the authentication rate limit the suite
+ * needs. It has to be there before the first authentication: the limiter keeps the limit an address
+ * started its window with, so a value set through the API after the setup's own login would only
+ * apply once the address had been quiet for a minute. Every other setting keeps its default.
+ */
+const systemConfiguration = (authenticationRateLimitPerMinute: number) => `<?xml version="1.0" encoding="utf-8"?>
+<ServerConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <AuthenticationRateLimitPerMinute>${authenticationRateLimitPerMinute}</AuthenticationRateLimitPerMinute>
+</ServerConfiguration>
 `;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -85,6 +97,7 @@ export async function startServer(): Promise<RunningServer> {
     const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'siren-e2e-'));
     fs.mkdirSync(path.join(dataDir, 'config'));
     fs.writeFileSync(path.join(dataDir, 'config', 'network.xml'), networkConfiguration(E2E_PORT));
+    fs.writeFileSync(path.join(dataDir, 'config', 'system.xml'), systemConfiguration(AUTH_RATE_LIMIT));
 
     const logFile = path.join(dataDir, 'server.stdout.log');
     const logFd = fs.openSync(logFile, 'a');

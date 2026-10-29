@@ -51,21 +51,37 @@ abre o inspetor, `-g "PIN"` filtra pelo título, `--trace on` grava o trace de t
 ## O que a suíte faz
 
 1. **Setup global** (`tests/e2e/global-setup.ts`): cria `%TEMP%\siren-e2e-*`, escreve
-   `config/network.xml` com a porta 8097 e sem descoberta automática, inicia
+   `config/network.xml` com a porta 8097 e sem descoberta automática e `config/system.xml` com o
+   limite de autenticações em 100 por minuto (veja [abaixo](#limite-de-autenticações)), inicia
    `dotnet jellyfin.dll --datadir <tmp> --webdir <repo>/dist --ffmpeg <ffmpeg> --nonetchange`,
    espera `GET /System/Info/Public` e `GET /System/Ping` responderem (a página de "iniciando" do
    servidor responde a primeira antes do servidor de verdade estar no ar), completa o assistente
    (`POST /Startup/Configuration` com `UICulture: en-US`, `GET`/`POST /Startup/User`,
-   `POST /Startup/RemoteAccess`, `POST /Startup/Complete`), autentica o administrador `e2e` e cria
+   `POST /Startup/RemoteAccess`, `POST /Startup/Complete`), autentica o administrador `e2e`, cria
    a família **Silva** com os perfis **pai** (administrador da família, PIN 1234) e **filho**
-   (sem PIN).
+   (sem PIN), cria duas bibliotecas (**Kids** e **Movies**, `POST /Library/VirtualFolders` sobre
+   pastas vazias dentro do diretório temporário) e verifica se o servidor conhece chaves de API
+   somente leitura (cria uma com `isReadOnly=true`, lê `IsReadOnly` de volta e a revoga). O id da
+   família e esse resultado vão para o ambiente (`SIREN_E2E_FAMILY_ID`, `SIREN_E2E_READONLY_KEYS`).
 2. **Projeto `setup`** (`auth.setup.ts`): o administrador entra pela tela de login e cai na home;
    o estado do navegador fica em `tests/e2e/.auth/admin.json` (ignorado pelo git) para os testes
    do painel e das configurações, que então não precisam entrar de novo.
-3. **Projeto `chromium`** (`*.spec.ts`): família (login de um perfil cai em "Who's watching?" com o
-   chip "Continue as pai"; trocar para o perfil sem PIN recarrega na home; PIN errado mostra
-   "Incorrect PIN."), painel (a página Families lista a família) e configurações de exibição (o
-   select de cor de destaque aparece).
+3. **Projeto `chromium`** (`*.spec.ts`, em ordem alfabética de arquivo):
+   - `backups.spec.ts`: a página Backups abre com o botão "Create Backup" e o estado vazio
+     "No backups available".
+   - `dashboard.spec.ts`: a página Families lista a família; o diálogo "New family" cria a família
+     **Souza** com o perfil **mae** (PIN 4321) e cai na página dela; restringir a família Silva à
+     biblioteca Kids faz o diálogo "Edit profile" de um perfil listar só Kids; a página de rede
+     mostra as configurações de segurança (limite de 100, o que o `system.xml` definiu) e salva.
+   - `display-settings.spec.ts`: o select de cor de destaque aparece.
+   - `family.spec.ts`: login de um perfil cai em "Who's watching?" com o chip "Continue as pai";
+     trocar para o perfil sem PIN recarrega na home; PIN errado mostra "Incorrect PIN."; em
+     "Manage profiles", o diálogo de avatar salva e o tile de **filho** passa a mostrar uma imagem;
+     cinco PINs errados em **pai** mostram a mensagem de bloqueio no diálogo e o chip "Locked for
+     N min" no tile (esse teste é o último do arquivo porque deixa **pai** bloqueado).
+   - `keys.spec.ts`: a página API Keys cria uma chave marcada "Read only" e mostra o chip. Fica
+     como *skipped* quando o servidor ainda não devolve `IsReadOnly` (`SIREN_E2E_READONLY_KEYS`
+     diferente de `1`).
 4. **Teardown global**: mata o servidor e apaga o diretório temporário.
 
 Os textos são conferidos em inglês porque o assistente define `en-US` e o Chromium roda com
@@ -73,12 +89,18 @@ Os textos são conferidos em inglês porque o assistente define `en-US` e o Chro
 
 ### Limite de autenticações
 
-O servidor aceita dez autenticações por minuto por endereço (login, troca de perfil e PIN errado
-contam), e esse limite vale também na instância descartável. A suíte gasta sete: uma na API do
-setup, uma no login do administrador e cinco nos testes de família. Os arquivos rodam um de cada
-vez (`workers: 1`) e o administrador entra uma única vez justamente para caber nesse orçamento; ao
-acrescentar testes que fazem login, prefira partir do estado salvo em `.auth/admin.json` ou conte
-as autenticações novas.
+O servidor aceita dez autenticações por minuto por endereço por padrão (login, troca de perfil e
+PIN errado contam). A suíte gasta mais do que isso só no teste de bloqueio (um login e cinco PINs
+errados), por isso o harness sobe a instância descartável com `AuthenticationRateLimitPerMinute`
+em 100 no `system.xml` (`AUTH_RATE_LIMIT` em `tests/e2e/harness/config.ts`). Tem de ser no
+arquivo, antes da primeira autenticação: o limitador guarda, por endereço, o limite com que a
+janela começou, e um valor gravado pela API só valeria depois de um minuto de silêncio. Os arquivos
+continuam rodando um de cada vez (`workers: 1`) e o administrador entra uma única vez; ao
+acrescentar testes que fazem login, prefira partir do estado salvo em `.auth/admin.json`.
+
+O bloqueio de perfil (cinco PINs errados) é por usuário e não zera entre testes: só um login certo
+zera o contador. Por isso o teste do avatar entra como **pai** antes do teste de bloqueio, e nada
+depois dele volta a usar o PIN de **pai**.
 
 ## Integração contínua
 
